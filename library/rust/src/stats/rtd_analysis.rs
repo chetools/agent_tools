@@ -45,6 +45,10 @@ pub const GOLDEN_MAXIT: usize = 200;
 pub const LSQ_SHAPE_RANGE: (f64, f64) = (0.05, 1e4);
 /// Search range of `tau` in [`fit_lsq`], as factors times the data mean.
 pub const LSQ_TAU_RANGE: (f64, f64) = (0.2, 5.0);
+/// Distance in `ln Pe` from a bracket end of the closed-closed inversion that counts as "at the edge".
+pub const BRACKET_EDGE_TOL: f64 = 1e-6;
+/// Closed-closed `sigma2_dispersion` uses a Taylor series below this `Pe` (cancellation in the closed form).
+pub const SIGMA2_SERIES_PE: f64 = 0.1;
 /// Bisection steps in the closed-closed moment inversion.
 pub const BISECT_ITER: usize = 200;
 
@@ -74,8 +78,10 @@ fn trapz(y: &[f64], x: &[f64]) -> f64 {
     s
 }
 
-/// Decay time `lam` (s) of `C ~ exp(-t/lam)` fitted to the last `frac` (default [`TAIL_FRAC`] = 0.25)
-/// of the samples.
+/// Decay time `lam` (s) of `C ~ exp(-t/lam)` fitted to the last `frac` of the samples.
+///
+/// `frac` is required here; the Python twin defaults it to 0.25 ([`TAIL_FRAC`], also used by
+/// [`rtd_moments`]).
 ///
 /// Least-squares line through `ln C` over the last `max(5, int(frac n))` samples. Returns `None`
 /// if any of them is `<= 0` (or NaN), if fewer samples exist, or if the slope is not negative.
@@ -237,7 +243,20 @@ pub fn e_tanks(theta: f64, n: f64) -> f64 {
 pub fn sigma2_dispersion(pe: f64, bc: BoundaryCondition) -> f64 {
     match bc {
         BoundaryCondition::OpenOpen => 2.0 / pe + 8.0 / (pe * pe),
-        BoundaryCondition::ClosedClosed => 2.0 / pe - 2.0 / (pe * pe) * (1.0 - (-pe).exp()),
+        BoundaryCondition::ClosedClosed => {
+            if pe < SIGMA2_SERIES_PE {
+                // the closed form loses all digits as Pe -> 0: use its Taylor series
+                let mut s = 0.0;
+                let mut fact = 2.0; // k!
+                for k in 2..12 {
+                    s += (if k % 2 == 0 { 1.0 } else { -1.0 }) * pe.powi(k - 2) / fact;
+                    fact *= (k + 1) as f64;
+                }
+                2.0 * s
+            } else {
+                2.0 / pe - 2.0 / (pe * pe) * (1.0 - (-pe).exp())
+            }
+        }
     }
 }
 
@@ -288,7 +307,11 @@ pub fn fit_moments(mean: f64, variance: f64, model: RtdModel, bc: BoundaryCondit
                     hi = mid;
                 }
             }
-            ok((0.5 * (lo + hi)).exp(), mean)
+            let x = 0.5 * (lo + hi);
+            if (x - 1e-6f64.ln()).min(1e8f64.ln() - x) < BRACKET_EDGE_TOL {
+                return fail("closed-closed Pe at the edge of the [1e-6, 1e8] bracket");
+            }
+            ok(x.exp(), mean)
         }
     }
 }

@@ -51,6 +51,8 @@ GOLDEN_TOL = 1e-9           # golden-section tolerance in log(parameter)
 GOLDEN_MAXIT = 200          # golden-section iteration limit
 LSQ_SHAPE_RANGE = (0.05, 1e4)   # search range of N or Pe (dimensionless)
 LSQ_TAU_RANGE = (0.2, 5.0)      # search range of tau, as a factor times the data mean
+BRACKET_EDGE_TOL = 1e-6   # ln Pe distance from a bracket end that counts as "at the edge"
+SIGMA2_SERIES_PE = 0.1     # closed-closed sigma2 uses a Taylor series below this Pe (cancellation)
 BISECT_ITER = 200           # bisection steps in the closed-closed inversion
 
 
@@ -112,6 +114,9 @@ def rtd_moments(t, C, pulse=0.0, tail=True):
         m0 += CT * lam
         m1 += CT * lam * (T + lam)
         m2 += CT * lam * (T * T + 2 * T * lam + 2 * lam * lam)
+    if not m0 > 0.0:     # zero (or NaN) total area: NaN, as in Rust
+        nan = float("nan")
+        return RtdMoments(np.full(C.shape, nan), nan, nan, lam)
     mean = m1 / m0
     var = m2 / m0 - mean * mean
     return RtdMoments(C / m0, mean - 0.5 * pulse, var - pulse * pulse / 12.0, lam)
@@ -184,6 +189,8 @@ def sigma2_dispersion(Pe, bc):
     if bc == OPEN_OPEN:
         return 2.0 / Pe + 8.0 / (Pe * Pe)
     if bc == CLOSED_CLOSED:
+        if Pe < SIGMA2_SERIES_PE:   # the closed form loses all digits as Pe -> 0: use its Taylor series
+            return 2.0 * sum((-1.0) ** k * Pe ** (k - 2) / math.factorial(k) for k in range(2, 12))
         return 2.0 / Pe - 2.0 / (Pe * Pe) * (1.0 - math.exp(-Pe))
     raise ValueError(f"unknown boundary condition {bc!r}")
 
@@ -210,7 +217,8 @@ def fit_moments(mean, variance, model, bc=OPEN_OPEN):
     model = "tanks": N = mean^2/variance. model = "dispersion": r = variance/mean^2 is matched
     to the model; open-open has the closed form Pe = (1 - 2 r + sqrt(1 + 4 r))/r; closed-closed
     has mean = tau and r = 2/Pe - 2/Pe^2 (1 - exp(-Pe)), solved by bisection in log Pe on
-    [1e-6, 1e8] (r must lie in (0, 1)). Fails (success False) for mean <= 0, variance <= 0, NaN,
+    [1e-6, 1e8] (r must lie in (0, 1); a solution within 1e-6 in ln Pe of either bracket end is
+    reported as failure, not clamped). Fails (success False) for mean <= 0, variance <= 0, NaN,
     or r outside the model's range. The variance of a record cut before the tail is biased low:
     use `rtd_moments` with tail=True.
     """
@@ -235,7 +243,10 @@ def fit_moments(mean, variance, model, bc=OPEN_OPEN):
                 lo = mid          # variance decreases with Pe: need larger Pe
             else:
                 hi = mid
-        return MomentFit(math.exp(0.5 * (lo + hi)), mean, True, "success")
+        x = 0.5 * (lo + hi)
+        if min(x - math.log(1e-6), math.log(1e8) - x) < BRACKET_EDGE_TOL:
+            return MomentFit(nan, nan, False, "closed-closed Pe at the edge of the [1e-6, 1e8] bracket")
+        return MomentFit(math.exp(x), mean, True, "success")
     raise ValueError(f"unknown boundary condition {bc!r}")
 
 

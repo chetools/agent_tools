@@ -253,3 +253,19 @@ fn failure_modes() {
     assert!(!fit_lsq(&[0.0, 1.0], &[0.0, 0.0], RtdModel::Tanks, None).success);
     println!("VERIFY rtd_analysis failure_modes all_ok=1");
 }
+
+#[test]
+fn review_findings() {
+    // F1: zero total area gives NaN
+    let z = rtd_moments(&[0.0, 1.0, 2.0], &[0.0, 0.0, 0.0], 0.0, true);
+    assert!(z.mean.is_nan() && z.variance.is_nan());
+    // F2: closed-closed solution beyond the [1e-6, 1e8] bracket is flagged, not clamped
+    let hi = fit_moments(1.0, 1e-9, RtdModel::Dispersion, BoundaryCondition::ClosedClosed);
+    assert!(!hi.success && hi.message.contains("bracket") && hi.param.is_nan());
+    let lo = fit_moments(1.0, 1.0 - 1e-7, RtdModel::Dispersion, BoundaryCondition::ClosedClosed);
+    assert!(!lo.success && lo.message.contains("bracket"));
+    let v = sigma2_dispersion(40.0, BoundaryCondition::ClosedClosed);
+    let ok = fit_moments(1.0, v, RtdModel::Dispersion, BoundaryCondition::ClosedClosed);
+    assert!(ok.success && (ok.param - 40.0).abs() < 1e-6);
+    println!("VERIFY rtd_analysis review_findings all_ok=1");
+}

@@ -177,6 +177,20 @@ def test_failure_modes():
     print("VERIFY rtd_analysis py_failure_modes all_ok=1")
 
 
+def test_review_findings():
+    # F1: zero total area gives NaN (as documented and as in Rust), not ZeroDivisionError
+    z = rtd_moments([0.0, 1.0, 2.0], [0.0, 0.0, 0.0])
+    assert math.isnan(z.mean) and math.isnan(z.variance)
+    # F2: closed-closed solution beyond either end of the [1e-6, 1e8] bracket is flagged, not clamped
+    hi = fit_moments(1.0, 1e-9, DISPERSION, CLOSED_CLOSED)     # true Pe about 2e9
+    assert not hi.success and "bracket" in hi.message and math.isnan(hi.param)
+    lo = fit_moments(1.0, 1.0 - 1e-7, DISPERSION, CLOSED_CLOSED)   # true Pe about 3e-7
+    assert not lo.success and "bracket" in lo.message
+    ok = fit_moments(1.0, sigma2_dispersion(40.0, CLOSED_CLOSED), DISPERSION, CLOSED_CLOSED)
+    assert ok.success and abs(ok.param - 40.0) < 1e-6
+    print("VERIFY rtd_analysis py_review_findings all_ok=1")
+
+
 def test_python_vs_rust_example():
     py, rs = python_example("rtd_analysis"), rust_example("rtd_analysis")
     assert py.keys() == rs.keys()
