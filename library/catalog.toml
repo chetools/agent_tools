@@ -16,6 +16,8 @@
 #   version         semantic version of the routine
 #   rust            path to Rust source
 #   python          path to Python reference implementation
+#   wgsl            path to WGSL kernel (area "gpu" only)
+#   js              path to WebGPU host wrapper (area "gpu" only)
 #   example         path to minimal working example
 #   features        optional capabilities, e.g. "dense_output", "events", "analytic_jacobian"
 #   units           units of inputs and outputs, where they apply

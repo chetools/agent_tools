@@ -27,6 +27,7 @@ Any reusable routine a scientist or engineer would otherwise rewrite. Areas grow
 | `units` | Unit conversion and dimensional checks |
 | `properties` | Physical property correlations (thermodynamic, transport), with data provenance |
 | `io` | Reading and writing common scientific data formats |
+| `gpu` | WebGPU (WGSL) compute kernels with JS host wrappers, in `f32`, each checked against a float64 Python reference: multigrid, reductions, isosurfaces, particle advection |
 
 New areas are added through the same pull-request process as routines (see `AGENTS.md`).
 
@@ -55,6 +56,8 @@ agent_tools/
 │   ├── catalog.toml            # machine-readable index of every routine
 │   ├── rust/                   # Rust crate, one module per area (f64, wasm32-friendly)
 │   ├── python/                 # readable reference implementation of each routine (also the test oracle)
+│   ├── wgsl/                   # WebGPU compute kernels (area gpu, f32)
+│   ├── js/                     # WebGPU host wrappers for the kernels, plus gpu_util.js
 │   ├── examples/               # one minimal working example per routine
 │   └── tests/
 │       ├── problems/           # benchmark and test-case definitions
@@ -68,4 +71,4 @@ Prebuilt `.wasm` modules with JS bindings are planned as release assets, so agen
 ## Open items
 
 - License: not yet chosen. Routines ported from other code (SciPy is BSD-3-Clause; other sources vary) must keep their original notices. Check each source's terms before porting. Property data must cite its source and that source's terms.
-- `make verify`: not yet written. It is described in `AGENTS.md` as the target behaviour.
+- `make verify`: covers the `gpu` area only so far (`verify-python`, `verify-gpu`); needs Python with numpy, scipy, scikit-image and pytest, Node.js with Playwright, and a Chromium with WebGPU (SwiftShader is used by default).

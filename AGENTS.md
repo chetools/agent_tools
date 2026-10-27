@@ -19,13 +19,14 @@ Use the area guides in `skills/scientific-routines/references/areas/` to choose 
 - **Rust / Rust-wasm:** depend on the crate in `library/rust/` by git path or tag. Do not copy files in. Unused functions are removed at link time with LTO, so the dependency does not bloat the wasm binary.
 - **No Rust toolchain or no wasm32 target:** use the prebuilt `.wasm` release assets with their JS bindings.
 - **Python / teaching pages:** use `library/python/`, which mirrors the Rust code step by step.
+- **WebGPU (area `gpu`):** load the kernel from `library/wgsl/` through its host wrapper in `library/js/`, which checks compilation, validation and device limits. Fetch both from a pinned commit or tag; do not edit a copy.
 - Never patch a routine inside a downstream project. If it needs a fix, change it here (section 4).
 
 ## 3. Promotion: adding a routine that does not exist yet
 
 When a task needs a general routine that is missing, add it here, following `skills/scientific-routines/references/promotion-checklist.md`. In short:
 
-1. Rust implementation and Python reference implementation, with the same algorithm and the same defaults. A routine where one of the two adds nothing (for example a Python-only file parser) may skip it; say why in its catalog `notes`.
+1. Rust implementation and Python reference implementation, with the same algorithm and the same defaults. A routine where one of the two adds nothing (for example a Python-only file parser) may skip it; say why in its catalog `notes`. A `gpu` routine is a WGSL kernel with a JS host wrapper plus the float64 Python reference; Rust is skipped (section 7).
 2. A minimal working example in `library/examples/`.
 3. Tests with stored reference outputs in `library/tests/`.
 4. A catalog entry with `status = "experimental"`.
@@ -68,6 +69,7 @@ Reproduce it with the Python reference implementation, and with the established 
 ## 7. Style for routines
 
 - `f64` throughout unless the area needs otherwise. Callbacks are passed as closures. No global state.
+- **Exception, area `gpu`:** WGSL in browsers has no `f64`, so kernels run in `f32`. Each routine states its own tolerance against the float64 Python reference in `verified_rtol`, chosen with margin over the measured error: about 1e-5 relative for local, non-iterative kernels, up to 5e-3 relative for iterative or accumulating ones, and exact equality for integer outputs (counts). The kernel is tested in headless Chromium with WebGPU (`make verify-gpu`), and the Python reference is tested against an independent method (`make verify-python`).
 - Units are documented on every public input and output. Routines in `units` and `properties` take explicit units, never assumed ones.
 - Minimal dependencies. Small-system linear algebra lives in this crate.
 - Every option has a documented default that matches the Python implementation.

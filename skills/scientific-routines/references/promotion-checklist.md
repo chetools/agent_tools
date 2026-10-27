@@ -18,6 +18,14 @@ Follow this checklist when adding a routine (or a new area) to the library. Ever
 - [ ] Iterative routines return a result struct reporting success, message, and evaluation counts.
 - [ ] Doc comments on every public item: what it does, defaults, valid ranges, failure modes.
 
+### Area `gpu` (WebGPU kernels)
+
+- [ ] Kernel in `library/wgsl/<routine>.wgsl` and host wrapper in `library/js/<routine>.js` built on `library/js/gpu_util.js`: own uniform struct and bind group, explicit bind-group layouts, compilation errors and device limits raise errors. No Rust implementation (AGENTS.md section 7).
+- [ ] Float64 Python reference in `library/python/gpu/<routine>.py`, mirroring the kernel step by step, with `make_reference()` producing the stored test data.
+- [ ] GPU test `library/tests/gpu/<routine>.test.js` (rows of error, tolerance, pass) run by `library/tests/gpu/run.mjs`; Python test `library/tests/python/test_<routine>.py` against an independent method.
+- [ ] Planted-defect run: a deliberately broken kernel line makes the GPU test fail.
+- [ ] `verified_rtol` holds the stated `f32` tolerance, set with margin over the measured error.
+
 ## Tests and reference data
 
 - [ ] At least two test cases, one of them hard for the problem class. The area guide lists typical choices; for numerical solvers, for example, Robertson and Van der Pol (μ = 1000) for stiff ODEs, Rosenbrock for optimization.
