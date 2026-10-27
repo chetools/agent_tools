@@ -31,16 +31,18 @@ def cholesky(a):
     """Cholesky factorization A = L L^T of the square array `a`.
 
     Only the lower triangle is read; symmetry is not checked. Fails (success False) when a
-    diagonal pivot is not strictly positive or is NaN (also for semidefinite or badly
+    diagonal pivot is not strictly positive, or is NaN or infinite (also for semidefinite or badly
     conditioned matrices).
     """
     l = np.array(a, dtype=float)
+    if l.ndim != 2 or l.shape[0] != l.shape[1]:
+        raise ValueError("cholesky: a must be a square 2-D array")
     n = l.shape[0]
     for j in range(n):
         s = l[j, j]
         for k in range(j):
             s -= l[j, k] * l[j, k]
-        if not (s > 0.0):
+        if not (s > 0.0 and np.isfinite(s)):
             return CholeskyResult(l, False,
                                   f"matrix is not positive definite: pivot {s:e} in column {j}")
         ljj = np.sqrt(s)

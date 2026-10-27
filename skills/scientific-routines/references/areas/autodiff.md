@@ -18,7 +18,7 @@ Derivatives of user code by automatic differentiation: forward-mode dual numbers
 
 Symptoms and fixes specific to this area. General ones are in `../troubleshooting.md`.
 
-- Derivative is NaN or infinite at `sqrt(0)`, `ln(0)` or a division by zero: the function itself is singular there; move the evaluation point.
+- Derivative is NaN or infinite (Rust) or `ZeroDivisionError`/`ValueError` is raised (Python) at `sqrt(0)`, `ln(0)` or a division by zero: the function itself is singular there; move the evaluation point.
 - Derivative of `abs` at exactly 0 is the right-hand derivative (the argument's derivative is passed through); do not rely on it at kinks.
 - Control flow that depends on values (`if x > 0`) is differentiated along the branch taken; derivatives of the branch condition are not seen.
 - Comparing AD with finite differences: use central differences with step about 1e-5 (1e-8 for first derivatives of well-scaled functions in f64); a smaller step is dominated by round-off.

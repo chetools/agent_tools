@@ -29,5 +29,7 @@ class Mulberry32:
         return self.next_u32() / 4294967296.0
 
     def below(self, n):
-        """Integer in 0..n-1 as next_u32 % n (slightly biased unless n divides 2^32); n >= 1."""
+        """Integer in 0..n-1 as next_u32 % n (slightly biased unless n divides 2^32); 1 <= n <= 2^32 - 1."""
+        if not 1 <= n <= 0xFFFFFFFF:
+            raise ValueError("below: n must be in 1..2**32-1")
         return self.next_u32() % n
