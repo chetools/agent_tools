@@ -11,3 +11,4 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `lu_dense` 0.1.0 (experimental, `linalg`): dense LU with partial pivoting, generic over `Real`.
 - `cholesky` 0.1.0 (experimental, `linalg`): Cholesky factorization and triangular solves.
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
+- `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.

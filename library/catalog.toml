@@ -124,3 +124,23 @@ verified_rtol = [0, 1e-14]
 tests = ["streams_bit_identical_vs_published_algorithm","node_bigint_cross_check","statistics_1e5","python_vs_rust"]
 source = "Steele, Lea & Flood, OOPSLA 2014; Vigna splitmix64.c (public domain); ported from chetools/claude sequential-design"
 notes = "u64 outputs and uniform() are bit-identical in Rust and Python; normal() agrees to libm rounding (0 difference observed in the tests). Not cryptographically secure. new(state) is the published algorithm; from_seed_stream(seed, stream) uses state = seed*1000003 + stream."
+
+[[routine]]
+id = "mulberry32"
+name = "Mulberry32 32-bit generator"
+area = "random"
+problem_class = "seeded_prng"
+suitable_for = ["bit_identical_across_languages","javascript_compatible","annealing_moves"]
+equivalent = "Ettinger mulberry32 (JavaScript)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/random/mulberry32.rs"
+python = "library/python/agent_tools/random/mulberry32.py"
+example = "library/examples/rust/mulberry32.rs"
+example_python = "library/examples/python/mulberry32.py"
+features = ["random","below"]
+units = "dimensionless"
+verified_rtol = [0, 0]
+tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
+source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
+notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
