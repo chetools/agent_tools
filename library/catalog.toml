@@ -1,8 +1,8 @@
 # Catalog of routines in chetools/agent_tools.
 #
 # Agents: read this file before writing any reusable scientific or engineering routine (see AGENTS.md).
-# One [[routine]] table per routine. The library is empty in this draft; the
-# commented example shows the schema and is NOT a real routine.
+# One [[routine]] table per routine. The commented example below shows the schema and is NOT a real routine.
+# library/tests/python/test_catalog.py checks required fields, unique ids, status, area and that every path exists.
 #
 # Field reference
 #   id              unique snake_case name, also the Rust module and Python file name
@@ -15,8 +15,9 @@
 #   status          "experimental" (agent-added, unreviewed) | "verified" (set only on a maintainer's explicit approval; see AGENTS.md section 5)
 #   version         semantic version of the routine
 #   rust            path to Rust source
-#   python          path to Python reference implementation
-#   example         path to minimal working example
+#   python          path to Python reference implementation (package agent_tools: library/python/agent_tools/<area>/<id>.py)
+#   example         path to the minimal working example (Rust: library/examples/rust/<id>.rs)
+#   example_python  path to the Python twin of the example (library/examples/python/<id>.py)
 #   features        optional capabilities, e.g. "dense_output", "events", "analytic_jacobian"
 #   units           units of inputs and outputs, where they apply
 #   valid_range     range of inputs the routine is tested or valid for (e.g. temperature range of a correlation)
@@ -35,8 +36,9 @@
 # status = "experimental"
 # version = "0.1.0"
 # rust = "library/rust/src/ode/radau5.rs"
-# python = "library/python/ode/radau5.py"
-# example = "library/examples/radau5_robertson.rs"
+# python = "library/python/agent_tools/ode/radau5.py"
+# example = "library/examples/rust/radau5.rs"
+# example_python = "library/examples/python/radau5.py"
 # features = ["dense_output", "events", "analytic_jacobian"]
 # verified_rtol = [1e-10, 1e-3]
 # tests = ["robertson", "van_der_pol_mu1000", "hires"]

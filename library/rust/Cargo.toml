@@ -1,0 +1,13 @@
+[package]
+name = "agent_tools"
+version = "0.1.0"
+edition = "2021"
+description = "Verified scientific and engineering routines (chetools/agent_tools)"
+
+[dependencies]
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }
+
+[profile.release]
+lto = true

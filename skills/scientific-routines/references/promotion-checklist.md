@@ -11,8 +11,8 @@ Follow this checklist when adding a routine (or a new area) to the library. Ever
 
 ## Implementation
 
-- [ ] **Rust** in `library/rust/src/<area>/<routine>.rs`: closure-based callbacks, no global state, no new dependencies without justification in the pull request.
-- [ ] **Python reference** in `library/python/<area>/<routine>.py`: the same algorithm, defaults and stopping tests, written for readability. It is both the teaching version and the test oracle.
+- [ ] **Rust** in `library/rust/src/<area>/<routine>.rs`: closure-based callbacks, no global state, no new dependencies without justification in the pull request; declared in `library/rust/src/<area>/mod.rs`.
+- [ ] **Python reference** in `library/python/agent_tools/<area>/<routine>.py`: the same algorithm, defaults and stopping tests, written for readability. It is both the teaching version and the test oracle.
 - [ ] If one of the two implementations adds nothing for this routine, it is skipped and the reason is stated in the catalog `notes`.
 - [ ] Units documented on every public input and output.
 - [ ] Iterative routines return a result struct reporting success, message, and evaluation counts.
@@ -21,18 +21,18 @@ Follow this checklist when adding a routine (or a new area) to the library. Ever
 ## Tests and reference data
 
 - [ ] At least two test cases, one of them hard for the problem class. The area guide lists typical choices; for numerical solvers, for example, Robertson and Van der Pol (μ = 1000) for stiff ODEs, Rosenbrock for optimization.
-- [ ] Reference outputs saved in `library/tests/reference_data/`. The file header records the generator (library and version, method, tolerances) or the published source, and the date.
+- [ ] Reference outputs saved in `library/tests/reference_data/<routine>.json`, made by a deterministic generator `library/tests/generators/<routine>.py`. The file header (`generator`, `versions`, `settings`, `date`, `notes`) records the generator (library and version, method, tolerances) or the published source, and the date.
 - [ ] Physical data: source cited (author, title, edition or DOI), valid ranges and units recorded; tests check values against the source's own tables.
-- [ ] Rust and Python each compared against the reference data, with errors (and evaluation counts, where relevant) recorded in the test output.
-- [ ] Rust and Python compared against each other to a stated tolerance.
-- [ ] `make verify` passes locally.
+- [ ] Rust (`library/rust/tests/<routine>.rs`) and Python (`library/tests/python/test_<routine>.py`) each compared against the reference data. Tolerances are named constants; each measured quantity prints a `VERIFY <routine> <case> <metric>=<value>` line (errors, and evaluation counts where relevant).
+- [ ] Rust and Python compared against each other to a stated tolerance, through the two examples (`rust_example(name)` and `python_example(name)` in `library/tests/python/conftest.py`).
+- [ ] `make verify` passes locally (Rust tests with `--nocapture`, then pytest with `-s`).
 
 ## Catalog and documentation
 
-- [ ] Entry added to `library/catalog.toml` with `status = "experimental"`.
+- [ ] Entry added to `library/catalog.toml` with `status = "experimental"`; `library/tests/python/test_catalog.py` checks it.
 - [ ] Row added or updated in the area guide.
 - [ ] Known failure symptoms added to `troubleshooting.md` or the area guide.
-- [ ] Minimal working example in `library/examples/`.
+- [ ] Minimal working example pair, `library/examples/rust/<routine>.rs` and `library/examples/python/<routine>.py`, each printing one JSON object with the same keys.
 - [ ] `CHANGELOG.md` entry and version bump.
 
 ## Pull request

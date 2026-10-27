@@ -18,7 +18,7 @@ Use the area guides in `skills/scientific-routines/references/areas/` to choose 
 
 - **Rust / Rust-wasm:** depend on the crate in `library/rust/` by git path or tag. Do not copy files in. Unused functions are removed at link time with LTO, so the dependency does not bloat the wasm binary.
 - **No Rust toolchain or no wasm32 target:** use the prebuilt `.wasm` release assets with their JS bindings.
-- **Python / teaching pages:** use `library/python/`, which mirrors the Rust code step by step.
+- **Python / teaching pages:** use `library/python/agent_tools/` (package `agent_tools`; a top-level area module named `random` would shadow the standard library), which mirrors the Rust code step by step.
 - Never patch a routine inside a downstream project. If it needs a fix, change it here (section 4).
 
 ## 3. Promotion: adding a routine that does not exist yet
