@@ -13,3 +13,4 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
 - `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.
 - `bfgs` 0.1.0 (experimental, `optimize`): BFGS with Armijo backtracking, unconstrained.
+- `bfgs` 0.1.0 (review fixes): stall stop (step leaves `x` unchanged, `success = false`, "no progress"), validation of `gtol` and `max_iter`, evaluation-cost documentation from the 8-D quadratic case. No change on converging runs.

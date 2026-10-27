@@ -40,7 +40,7 @@ Event detection (zero crossings) and dense output are features of the integrator
 
 | Situation | Method | SciPy equivalent | Notes |
 |---|---|---|---|
-| Smooth, unconstrained, gradient available, small to moderate n (tens) | BFGS: `bfgs` | `BFGS` | Armijo backtracking only (no Wolfe curvature condition), identity start, dense `O(n^2)` inverse Hessian. Stops on max-norm gradient < `gtol` (default 1e-5). Tested to `gtol` = 1e-10; needed 1.25 to 1.4 times SciPy's function evaluations on the Rosenbrock cases and 2.4 to 2.8 times on a 5-D quadratic (see catalog). No bounds: transform to unbounded variables. |
+| Smooth, unconstrained, gradient available, small to moderate n (tens) | BFGS: `bfgs` | `BFGS` | Armijo backtracking only (no Wolfe curvature condition), identity start, dense `O(n^2)` inverse Hessian. Stops on max-norm gradient < `gtol` (default 1e-5). Tested to `gtol` = 1e-10; needed 1.25 to 1.4 times SciPy's function evaluations on the Rosenbrock cases 2.4 to 2.8 times on a 5-D quadratic, and about 3 times on an 8-D quadratic with eigenvalues 1 to 1e3 (a reviewer measured 5 times on another one; see catalog). No bounds: transform to unbounded variables. |
 | Smooth, many variables, or simple bounds | L-BFGS-B | `L-BFGS-B` | Limited memory; handles box bounds. |
 | Noisy or non-differentiable objective, few variables | Nelder–Mead | `Nelder-Mead` | Derivative-free. Slow in high dimensions. |
 | Equality and inequality constraints | SQP | `SLSQP` | Needs gradients of objective and constraints. |

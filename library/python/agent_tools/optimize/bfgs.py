@@ -17,7 +17,12 @@ Per iteration:
 1. Stop with success if max|g| < gtol (strict).
 2. Direction p = -H g; if g.p >= 0 (not a descent direction) reset H = I and use p = -g.
 3. Backtrack a = 1, 1/2, 1/4, ... until f(x + a p) <= f(x) + C1 a g.p; fail if a < MIN_STEP.
-4. Update H unless the curvature s.y <= SY_MIN; accept the step.
+4. Stop with failure ("no progress") if the step left x unchanged (x + a p == x in every
+   component): this happens when gtol is below what rounding allows. The point before the step is
+   returned and the step is not counted. (A rule on f not decreasing was tried and rejected: near
+   convergence f stops changing in floating point well before max|g| reaches a tolerance like
+   1e-10, and the run still converges.)
+5. Update H unless the curvature s.y <= SY_MIN; accept the step.
 
 H starts as the identity (no scaling), so the first step has length |g|. Cost O(n^2) memory and
 O(n^3) work per iteration: intended for small to moderate n (tens).
@@ -39,7 +44,7 @@ SY_MIN = 1e-12   # H update skipped if s.y <= SY_MIN; absolute, in (units of x)*
 class BfgsOptions:
     """Options of `bfgs`.
 
-    max_iter: maximum number of accepted steps (default 200).
+    max_iter: maximum number of accepted steps (default 200, at least 1).
     gtol: stop when max|gradient| < gtol, in units of f per unit of x (default 1e-5, positive).
     """
     max_iter: int = 200
@@ -54,8 +59,8 @@ class BfgsResult:
     f: objective value at x (units of f).
     grad_norm: max-norm of the gradient at x (units of f per unit of x); compared with gtol.
     success: True if grad_norm < gtol was reached.
-    message: "converged: ..." or the reason for failure (iteration limit, line-search failure,
-        non-finite objective or gradient).
+    message: "converged: ..." or the reason for failure (invalid option, iteration limit,
+        line-search failure, no progress, non-finite objective or gradient).
     nit: number of accepted steps.
     nfev: number of calls of fg (f and gradient together), including the call at x0 and the
         rejected line-search trial points.
@@ -95,11 +100,21 @@ def bfgs(fg, x0, options=None):
     be reused between calls: copy them if you keep them. x0 is the start (units of x),
     n = len(x0) >= 1; options is a `BfgsOptions` (defaults above).
 
-    Failure modes (success False, best point so far returned): non-finite f or gradient at x0 or
-    at an accepted point; the line search shrinks the step below MIN_STEP (typical for a wrong
-    gradient sign or a discontinuous objective); max_iter steps without convergence.
+    Failure modes (success False, best point so far returned): gtol not finite or not positive, or
+    max_iter < 1 (checked first: fg is never called, nfev = 0, x = x0, f and grad_norm NaN);
+    non-finite f or gradient at x0 or at an accepted point; the line search shrinks the step below
+    MIN_STEP (typical for a wrong gradient sign or a discontinuous objective); a step that leaves
+    x unchanged ("no progress": gtol is below the accuracy that rounding allows; raise it); max_iter
+    steps without convergence.
     """
     opt = options if options is not None else BfgsOptions()
+    nan = float("nan")
+    if not (np.isfinite(opt.gtol) and opt.gtol > 0):
+        return BfgsResult(np.array([float(v) for v in x0]), nan, nan, False,
+                          f"invalid option: gtol = {opt.gtol:e} must be finite and > 0", 0, 0)
+    if opt.max_iter < 1:
+        return BfgsResult(np.array([float(v) for v in x0]), nan, nan, False,
+                          "invalid option: max_iter must be >= 1", 0, 0)
     z = [float(v) for v in x0]
     n = len(z)
     grad = np.zeros(n)
@@ -138,6 +153,10 @@ def bfgs(fg, x0, options=None):
             if a < MIN_STEP:
                 return BfgsResult(np.array(z), f, gn, False,
                                   f"line search failed: step below {MIN_STEP:e}", nit, nfev)
+        if z1 == z:
+            return BfgsResult(np.array(z), f, gn, False,
+                              "no progress: step left x unchanged (gtol below attainable accuracy?)",
+                              nit, nfev)
         g1 = grad.tolist()
         s = [z1[i] - z[i] for i in range(n)]
         yv = [g1[i] - g[i] for i in range(n)]
