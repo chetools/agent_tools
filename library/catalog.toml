@@ -146,6 +146,27 @@ source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
 
 [[routine]]
+id = "lhs_maximin"
+name = "Maximin Latin hypercube design (best of k random LHS)"
+area = "stats"
+problem_class = "space_filling_design"
+suitable_for = ["initial_design","computer_experiments","surrogate_training_points","bit_identical_across_languages"]
+equivalent = "scipy.stats.qmc.LatinHypercube (plain; optimization='random-cd' optimizes discrepancy, not maximin)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/lhs_maximin.rs"
+python = "library/python/agent_tools/stats/lhs_maximin.py"
+example = "library/examples/rust/lhs_maximin.rs"
+example_python = "library/examples/python/lhs_maximin.py"
+features = ["latin_property","random_position_in_slice","min_distance_reported","seeded_bit_identical"]
+units = "dimensionless: points in the unit cube [0,1)^d (scale to physical ranges as lo + x*(hi-lo)); min_distance in unit-cube length"
+valid_range = "n >= 1, d >= 1, tries >= 1; tested n = 1..100, d = 1..10, tries up to 200"
+verified_rtol = [0, 1e-14]
+tests = ["latin_property_n1_to_100_d1_to_10","designs_vs_independent_impl_bit_exact","monotone_in_tries","seed_study_vs_scipy_qmc_n50_d10","python_vs_rust_bit_identical"]
+source = "McKay, Beckman & Conover, Technometrics 21 (1979) 239-245 (LHS); Johnson, Moore & Ylvisaker, J. Stat. Plann. Inference 26 (1990) 131-148 (maximin distance designs); Morris & Mitchell, J. Stat. Plann. Inference 43 (1995) 381-402 (maximin criterion; their annealing search is NOT implemented); ported from chetools/claude sequential-design (own code)"
+notes = "Plain best-of-k random search, default k = 50 in the source (no default in the Rust signature; pass tries). Points sit at a random, not centred, position in each slice. Pass a SplitMix64 (the source uses from_seed_stream(seed, stream)); the same generator state gives identical designs in Rust and Python. Larger tries never lowers the minimum distance for the same generator state, but the gain is slow: at n = 50, d = 10 the mean min distance is about 0.50 for 1 candidate and 0.63 for 50, while scipy optimization='random-cd' reaches about 0.72 (different criterion, same test seeds). Use Morris-Mitchell style exchange optimization for a real maximin optimum. n = 1 returns min_distance 1.0 by convention."
+
+[[routine]]
 id = "bfgs"
 name = "BFGS minimization with Armijo backtracking"
 area = "optimize"

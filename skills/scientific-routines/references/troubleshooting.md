@@ -69,6 +69,15 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
 
+## Design of experiments (`lhs_maximin`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Design points are not at slice centres | By design: each point sits at a uniformly random position inside its slice | Use `(slice + 0.5) / n` yourself if centred points are wanted. |
+| Min distance is small in high dimension (d = 10, n = 50: about 0.5 to 0.6) | Best-of-k random search is weak in high dimension; gain per extra candidate shrinks | Raise `tries` (cost is linear) or use an optimizing search (exchange / annealing, Morris & Mitchell 1995). |
+| `success == false`, empty points | `n`, `d` or `tries` equal to 0 | Pass values of at least 1. |
+| Rust and Python designs differ | Different generator constructor or seed, or a different draw order before the call | Build both with `from_seed_stream(seed, stream)` and consume nothing from the generator beforehand. |
+
 ## Optimization (`bfgs`)
 
 | Symptom | Likely cause | Fix |
