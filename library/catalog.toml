@@ -1,0 +1,44 @@
+# Catalog of routines in chetools/agent_tools.
+#
+# Agents: read this file before writing any reusable scientific or engineering routine (see AGENTS.md).
+# One [[routine]] table per routine. The library is empty in this draft; the
+# commented example shows the schema and is NOT a real routine.
+#
+# Field reference
+#   id              unique snake_case name, also the Rust module and Python file name
+#   name            human-readable name
+#   area            area id from the README.md area table, e.g. "ode", "interpolate", "stats", "properties"
+#   problem_class   what it solves, e.g. "ivp", "scalar_root", "least_squares",
+#                   "monotone_interpolation", "weighted_regression", "vapor_pressure"
+#   suitable_for    tags such as "stiff", "nonstiff", "bracketed", "derivative_free", "noisy_data"
+#   equivalent      closest established call, for orientation (e.g. a SciPy or NumPy function)
+#   status          "experimental" (agent-added, unreviewed) | "verified" (set only on a maintainer's explicit approval; see AGENTS.md section 5)
+#   version         semantic version of the routine
+#   rust            path to Rust source
+#   python          path to Python reference implementation
+#   example         path to minimal working example
+#   features        optional capabilities, e.g. "dense_output", "events", "analytic_jacobian"
+#   units           units of inputs and outputs, where they apply
+#   valid_range     range of inputs the routine is tested or valid for (e.g. temperature range of a correlation)
+#   verified_rtol   range of relative tolerances the tests cover, [low, high], where tolerances apply
+#   tests           test or benchmark ids the routine passes
+#   source          algorithm or data reference (book/paper/code/handbook), and its license if code or data was ported
+#   notes           anything an agent must know before using it
+
+# [[routine]]
+# id = "radau5"
+# name = "Radau IIA, order 5, adaptive step"
+# area = "ode"
+# problem_class = "ivp"
+# suitable_for = ["stiff", "nonstiff", "dae_index1"]
+# equivalent = "scipy.integrate.solve_ivp(method='Radau')"
+# status = "experimental"
+# version = "0.1.0"
+# rust = "library/rust/src/ode/radau5.rs"
+# python = "library/python/ode/radau5.py"
+# example = "library/examples/radau5_robertson.rs"
+# features = ["dense_output", "events", "analytic_jacobian"]
+# verified_rtol = [1e-10, 1e-3]
+# tests = ["robertson", "van_der_pol_mu1000", "hires"]
+# source = "Hairer & Wanner, Solving ODEs II, Sec. IV.8; SciPy _ivp/radau.py (BSD-3-Clause)"
+# notes = "Supply an analytic Jacobian when available; finite differences cost n extra RHS calls per refresh."

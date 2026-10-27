@@ -1,6 +1,6 @@
-# Method selection
+# Area guide: ode, roots, optimize, linalg
 
-This is general guidance from standard numerical-analysis practice. It is not a set of measured results for this library. Once routines exist, their `catalog.toml` entries record what each one has actually been tested on. Where the two disagree, the catalog wins.
+This is general guidance from standard numerical-analysis practice. It is not a set of measured results for this library. Once routines exist, their `library/catalog.toml` entries record what each one has actually been tested on. Where the two disagree, the catalog wins.
 
 "Planned" means the routine is not in the library yet; check `catalog.toml` for current status.
 
