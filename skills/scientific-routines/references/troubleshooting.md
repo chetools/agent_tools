@@ -76,3 +76,13 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Many more evaluations than `scipy.optimize.minimize(method='BFGS')` | Halving-only Armijo line search, no Wolfe curvature condition or interpolation | Expected (about 1 to 3 times SciPy's count in the catalog tests); use SciPy where evaluations are expensive. |
 | Inverse-Hessian update silently skipped | Curvature `s.y <= 1e-12` (absolute threshold) | Rescale `x` and `f` so curvature is O(1). |
 | Result violates a bound | `bfgs` is unconstrained | Optimize transformed unbounded variables, scaling the gradient by the chain rule. |
+
+## Gaussian processes and design (`gp_matern52`, `imse_batch`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `gp_fit` reports `success = false`, "line search failed", but the NLL agrees with other starts | Ill-conditioned covariance (near-duplicate inputs, tiny noise): the NLL is flat to rounding at the optimum | Expected; compare `start_nll` across starts. Fix the noise to a realistic value or remove duplicates if it matters. |
+| Fitted length scale at about 0.02 or 5 (or noise at 1e-3 std(y)) | Hyperparameter on its bound: inputs not scaled to [0, 1], or the data do not determine it | Scale inputs, widen `log_length_bounds`, or fix the noise. |
+| One start ends with a much larger NLL (for example 45 vs 9.75) | Local optimum of the marginal likelihood | Expected; the best start is kept. Add `n_random_starts` for more coverage. |
+| `gp_build` returns an error / raises "not positive definite" | Duplicate inputs with `noise_sd = 0` | Use a positive `noise_sd`. |
+| IMSE batch picks differ between Rust and Python | Two candidates with nearly equal scores (symmetric grids or data) | Compare `first_scores`; ties go to the first index. |

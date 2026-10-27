@@ -165,3 +165,45 @@ verified_rtol = [1e-12, 1e-8]
 tests = ["quadratic_n5_exact","rosenbrock_2d","extended_rosenbrock_n10","scaled_valley_a1000","vs_scipy_bfgs_gtol_1e-10","failure_modes","python_vs_rust_iterates"]
 source = "Nocedal & Wright, Numerical Optimization, 2nd ed., Alg. 6.1, eq. 6.17, Alg. 3.1; ported from chetools/claude sequential-design (own code)"
 notes = "Unconstrained only (the source's bounds were a problem-specific tanh transform, not ported). Defaults: gtol = 1e-5 (max-norm, strict), max_iter = 200, Armijo c1 = 1e-4, halving until step < 1e-10, update skipped if s.y <= 1e-12 (absolute). Identity initial inverse Hessian. fg may return inf/NaN to reject a trial point. Uses 1 to 3 times SciPy's evaluations (no Wolfe line search). Python and Rust give identical iterates (loops in the same order)."
+
+[[routine]]
+id = "gp_matern52"
+name = "Gaussian-process regression, Matern-5/2 ARD kernel, maximum-likelihood hyperparameters"
+area = "stats"
+problem_class = "gaussian_process_regression"
+suitable_for = ["surrogate_models","sequential_design","small_n_smooth_responses","uncertainty_of_predictions"]
+equivalent = "sklearn GaussianProcessRegressor(Matern(nu=2.5) ARD + WhiteKernel, normalize_y=True)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/gp_matern52.rs"
+python = "library/python/agent_tools/stats/gp_matern52.py"
+example = "library/examples/rust/gp_matern52.rs"
+example_python = "library/examples/python/gp_matern52.py"
+features = ["ard_length_scales","noise_fitted_or_fixed","bounded_hyperparameters_tanh","multi_start_with_seeded_random_starts","log_marginal_likelihood","predict_mean_variance","posterior_cross_covariance","analytic_nll_gradient"]
+units = "x any units (length scales in units of x; default bounds assume x scaled to [0,1]); mean, signal_sd, noise_sd in units of y; variances and covariances in units of y^2"
+valid_range = "n up to a few hundred (dense O(n^3)); tested d = 1, 2, 5, n = 8 to 40, cond(K) up to ~1e8"
+verified_rtol = [1e-13, 1e-7]
+tests = ["kernel_vs_bessel_matern","nll_and_gradient_vs_dense_fd","gradient_central_differences_both_sides","fit_vs_scipy_lbfgsb_three_cases","predict_vs_dense_solve","noise_free_interpolation","hard_d5_n40_close_points_tiny_noise","python_vs_rust"]
+source = "Rasmussen & Williams, Gaussian Processes for Machine Learning (2006), eqs. 4.17, 5.8, 5.9, Alg. 2.1; ported from chetools/claude sequential-design (own code)"
+notes = "y is standardised (mean, population std); a 1e-8 jitter (standardised variance) is always added to the diagonal. Hyperparameters boxed by a tanh transform (defaults: ell in [0.02, 5] x-units, signal_sd/std(y) in [0.1, 10], noise_sd/std(y) in [1e-3, 1]) and fitted by the library bfgs from starts ell = 0.1, 0.3, 1.0 (+ optional SplitMix64 random starts); best NLL kept. Near a bound the fitted value sits close to, not at, the bound. On ill-conditioned problems BFGS may stop with 'line search failed' at the optimum to rounding (success = false; hard5d Python case)."
+
+[[routine]]
+id = "imse_batch"
+name = "Greedy integrated-mean-squared-error batch selection"
+area = "stats"
+problem_class = "sequential_design_of_experiments"
+suitable_for = ["batch_sequential_design","active_learning_gp","global_surrogate_accuracy"]
+equivalent = "none in SciPy; brute-force greedy re-conditioning (test reference)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/imse_batch.rs"
+python = "library/python/agent_tools/stats/imse_batch.py"
+example = "library/examples/rust/imse_batch.rs"
+example_python = "library/examples/python/imse_batch.py"
+features = ["candidates_and_reference_points_separate","rank_one_covariance_downdate","variance_reduction_per_pick","first_step_score_map","replicates_allowed"]
+units = "covariances, noise variance and reductions in the same units (y^2 with gp_matern52.posterior_cov)"
+valid_range = "dense nc x nc and nr x nc matrices; O(batch (nc^2 + nr nc)); tested nc = 64, 100, nr = 40, 64, batch up to 4"
+verified_rtol = [1e-7, 1e-5]
+tests = ["vs_brute_force_reconditioning","downdate_vs_reconditioning","score_is_drop_in_average_variance","edge_cases","python_vs_rust"]
+source = "IMSE criterion: Sacks, Welch, Mitchell & Wynn, Statistical Science 4 (1989); greedy GP selection: Seo et al., IJCNN 2000; ported from chetools/claude sequential-design greedy_batch (own code)"
+notes = "Takes posterior covariance matrices (any GP), not points; use gp_matern52 posterior_cov(candidates, candidates) and posterior_cov(reference, candidates). Picks the first index on ties. Does not refit hyperparameters between picks. Agreement with the brute-force reference is limited by the conditioning of the re-conditioned GP (about 1e-8 relative in the tests, where the fitted noise sits on its lower bound)."

@@ -13,3 +13,5 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
 - `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.
 - `bfgs` 0.1.0 (experimental, `optimize`): BFGS with Armijo backtracking, unconstrained.
+- `gp_matern52` 0.1.0 (experimental, new area guide `stats`): Matern-5/2 ARD Gaussian-process regression with maximum-likelihood hyperparameters, predictions and posterior covariance.
+- `imse_batch` 0.1.0 (experimental, `stats`): greedy IMSE batch selection with rank-one covariance downdates.
