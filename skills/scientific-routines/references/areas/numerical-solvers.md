@@ -19,6 +19,12 @@ Signs of stiffness: an explicit method takes very many tiny steps while the solu
 
 Event detection (zero crossings) and dense output are features of the integrator interface. Record in the catalog which routines support them.
 
+### Implemented ODE routines
+
+| Situation | Routine | SciPy equivalent | Notes |
+|---|---|---|---|
+| Stiff IVP, small n, dense Jacobian available, rtol about 1e-3 to 1e-6; or derivatives of the result with respect to parameters through the adaptive steps (`Dual` state) | `rosenbrock23` (ode23s, 2nd order, Shampine and Reichelt 1997) | none in `solve_ivp`; compare `Radau`, `BDF` | One LU of `I - h d J` per attempted step, no Newton iteration. Measured (see catalog): at the same rtol it needs many more steps than Radau or BDF (Robertson to 1e5, rtol 1e-7: 9105 steps vs 372 and 536), so prefer Radau for tight tolerances when no AD is needed. Achieved error is 2 to 150 times rtol. Needs `df/dt` (`dfdt` closure or `fd_dfdt`) for time-dependent `f`. Stores t, y and dy/dt at accepted steps for Hermite dense output. No event detection. |
+
 ## Scalar roots (SciPy `brentq`, `root_scalar`)
 
 | Situation | Method | Notes |
@@ -55,3 +61,4 @@ Implicit integrators and Newton-type solvers need dense LU with partial pivoting
 |---|---|---|---|
 | Small dense general system `A x = b` (Newton steps, implicit integrators); also with `Dual` entries for sensitivities | `lu_dense` | `scipy.linalg.lu_factor` / `lu_solve`, `numpy.linalg.solve` | Partial pivoting on values. Reports exact zero or non-finite pivots only; check the residual for near-singular systems. Generic over `Real`. |
 | Symmetric positive definite system, Gaussian-process covariances, SPD test | `cholesky` (+ `solve_lower`, `solve_upper_t`, `cholesky_solve`) | `numpy.linalg.cholesky`, `scipy.linalg.cho_solve` | Fails (`success = false`) on non-SPD input, which doubles as an SPD test. f64 only. About half the cost of LU. |
+| Block-tridiagonal system (banded Jacobians of 1D discretisations with `m` coupled unknowns per node), many right-hand sides per factorization; also with `Dual` entries | `block_tridiagonal` (`block_tridiag_factor`, `block_tridiag_solve`) | `numpy.linalg.solve` on the assembled matrix; `scipy.linalg.solve_banded` with bandwidth `2m-1` | Block Thomas, O(nb m^3) factor, O(nb m^2) per solve. Pivots only inside diagonal blocks, never across blocks: needs block diagonal dominance, SPD or M-matrix structure. Exactly singular diagonal block gives `success = false`; near-singular is not detected, watch `growth`. Generic over `Real`. |
