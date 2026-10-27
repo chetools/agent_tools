@@ -8,3 +8,4 @@ pub mod autodiff;
 pub mod linalg;
 pub mod random;
 pub mod interpolate;
+pub mod ode;
