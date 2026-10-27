@@ -84,3 +84,23 @@ verified_rtol = [1e-14, 1e-12]
 tests = ["random_well_conditioned_n1_to_50","ill_conditioned_1e4_1e8_1e12","singular","dual_solution_derivative","python_vs_rust"]
 source = "Golub & Van Loan, Matrix Computations, 4th ed., Alg. 3.4.1 (written from the book; no code ported)"
 notes = "Row-major flat matrices. Singularity = exactly zero or non-finite pivot only; nearly singular matrices are not detected, check the residual. Ill-conditioned tests use error <= 10 eps cond against SciPy. Pivot is chosen on .val(), so a Dual solution is the derivative for that pivot sequence."
+
+[[routine]]
+id = "cholesky"
+name = "Cholesky factorization with triangular solves"
+area = "linalg"
+problem_class = "spd_linear_solve"
+suitable_for = ["symmetric_positive_definite","multiple_right_hand_sides","gp_regression"]
+equivalent = "numpy.linalg.cholesky; scipy.linalg.cho_solve"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/linalg/cholesky.rs"
+python = "library/python/agent_tools/linalg/cholesky.py"
+example = "library/examples/rust/cholesky.rs"
+example_python = "library/examples/python/cholesky.py"
+features = ["spd_check_by_failure","multiple_rhs"]
+units = "dimensionless (x has units of b / A)"
+verified_rtol = [1e-16, 1e-12]
+tests = ["random_spd_n1_to_50","hilbert_cond_5e5_to_1.6e13","not_spd","triangular_multi_rhs","python_vs_rust"]
+source = "Golub & Van Loan, Matrix Computations, 4th ed., Alg. 4.2.1; ported from chetools/claude sequential-design (own code)"
+notes = "Only the lower triangle is read; symmetry is not checked. Failure (success=false) on a non-positive or NaN pivot, which includes semidefinite matrices. f64 only."

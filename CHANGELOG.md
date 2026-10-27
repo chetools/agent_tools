@@ -9,3 +9,4 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - Scaffold: `make verify`, crate `agent_tools` (`library/rust/`), Python package `agent_tools` (`library/python/`), pytest helpers (`rust_example`, `python_example`, `load_reference`), catalog check. Layout in README updated.
 - `dual` 0.1.0 (experimental, new area `autodiff`): `Real` trait and forward-mode `Dual` numbers; nested duals give second derivatives.
 - `lu_dense` 0.1.0 (experimental, `linalg`): dense LU with partial pivoting, generic over `Real`.
+- `cholesky` 0.1.0 (experimental, `linalg`): Cholesky factorization and triangular solves.
