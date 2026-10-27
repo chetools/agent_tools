@@ -24,7 +24,7 @@ pub struct CholeskyResult {
 /// Cholesky factorization `A = L L^T` of the `n x n` row-major matrix `a`.
 ///
 /// Only the lower triangle of `a` is read; symmetry is not checked. Fails (`success = false`)
-/// when a diagonal pivot is not strictly positive or is NaN, which also happens for a
+/// when a diagonal pivot is not strictly positive, or is NaN or infinite, which also happens for a
 /// semidefinite or badly conditioned matrix. Panics if `a.len() != n*n`.
 pub fn cholesky(a: &[f64], n: usize) -> CholeskyResult {
     assert_eq!(a.len(), n * n, "cholesky: a must have n*n entries");
@@ -34,7 +34,7 @@ pub fn cholesky(a: &[f64], n: usize) -> CholeskyResult {
         for k in 0..j {
             s -= l[j * n + k] * l[j * n + k];
         }
-        if !(s > 0.0) {
+        if !(s > 0.0 && s.is_finite()) {
             return CholeskyResult {
                 l,
                 success: false,
