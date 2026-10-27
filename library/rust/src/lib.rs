@@ -7,6 +7,7 @@
 pub mod autodiff;
 pub mod linalg;
 pub mod random;
+pub mod process;
 pub mod properties;
 pub mod stats;
 pub mod optimize;
