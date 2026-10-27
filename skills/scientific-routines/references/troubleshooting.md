@@ -68,3 +68,14 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
+
+## ODE integrators (`rosenbrock23`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Very many steps (hundreds of thousands) at tight rtol, or `max_steps` reached | Second-order method: steps scale like `rtol^(1/3)` | Loosen rtol, raise `max_steps`, or use a higher-order stiff solver (Radau) when no AD is needed. |
+| Time-dependent `f` is integrated with a large error or needs far more steps | `df/dt` taken as zero (the autonomous default) | Pass the `dfdt` closure, or set `fd_dfdt = true`. |
+| Dual sensitivities are wrong or zero | The Jacobian closure returns plain values while the state is Dual, or the parameter is not seeded in `jac` | Build `f` and `jac` from the same generic code, so the parameter's derivative part enters both. |
+| Failure "W = I - h d J is singular" | `1/(h d)` is an eigenvalue of `J`, or `J` has NaN | Check the Jacobian; the step is not shrunk automatically after this failure. |
+| Failure "step size underflow" | Finite-time blow-up, a discontinuity, or an inconsistent Jacobian | Check `f` and `jac` against each other by finite differences; shorten the span before a singularity. |
+| Achieved error is 10 to 100 times larger than rtol | Local, not global, error control (expected) | Request an rtol 10 to 100 times smaller than the accuracy you need; check against a tighter run. |
