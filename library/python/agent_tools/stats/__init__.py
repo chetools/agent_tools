@@ -1,1 +1,1 @@
-"""Statistics, curve fitting and residence-time analysis."""
+"""Statistics, regression, design of experiments and residence-time analysis."""
