@@ -8,10 +8,11 @@
 //! SEIDER set (Seider, Seader, Lewin, Widagdo et al., "Product and Process Design Principles", Wiley):
 //! purchase cost of the base (carbon-steel) exchanger C_B = exp(c0 + c1 ln A + c2 ln^2 A), A in ft^2;
 //! material factor F_M = a + (A/100 ft^2)^b (the book's shell-and-tube material-factor equation;
-//! numbered 22.44 in the 3rd edition per the IDAES documentation, 16.44 in the 4th edition per the
-//! task statement; equation and page numbers were NOT checked against the books);
+//! numbered 22.44 in the 3rd edition per the IDAES documentation; equation and page numbers were NOT
+//! checked against the books);
 //! pressure factor F_P = 0.9803 + 0.018 (P/100) + 0.0017 (P/100)^2, P in psig (IDAES code comment gives
-//! the validity range 100-2000 psig; used here at any P);
+//! the validity range 100-2000 psig; used here at any P, [`seider_pressure_below_range`] flags
+//! P < 100 psig);
 //! tube-length factor F_L (8, 12, 16, 20 ft: 1.25, 1.12, 1.05, 1.00).
 //! The base-cost coefficients are those coded in BioSTEAM (units/design_tools), cost-index basis
 //! CE = 567; the book's own purchase cost is C_P = F_P F_M F_L C_B. The bare-module cost used here,
@@ -19,9 +20,15 @@
 //! not a book equation. Valid area range as used by the source project: 150-12 000 ft^2
 //! (13.9-1115 m^2): below it the cost of a 150 ft^2 unit is charged (slope 0), above it the
 //! correlation is extrapolated and `above_range` is set.
-//! Cross-check: the IDAES SSLW module (3rd ed., CE = 500) lists a different floating-head intercept
-//! (11.9052 vs 12.0310 here), so the coefficient set is NOT confirmed against the book; the material
-//! factors (a, b), F_P and F_L agree exactly with IDAES.
+//! Coefficient provenance (PR review findings; open items for the maintainer, no coefficient was changed):
+//!   * floating head: BioSTEAM 12.0310 (CE 567) vs IDAES SSLW 11.9052 (CE 500) differ by ln(567/500) = 0.1258,
+//!     so the costs agree to 4.9e-5 after the cost-index shift (checked in the tests). Not a contradiction.
+//!   * fixed head: slope -0.9228 here (BioSTEAM; a Penn lecture snippet, Lewin FOCAPD 2004, agrees) against
+//!     -0.8228 in IDAES. It is unconfirmed which is right; the IDAES value is probably a typo.
+//!   * U-tube: the intercepts differ by 0.1658, more than the index shift 0.1258 (4.1 % cost difference);
+//!     unresolved.
+//!   * No book was consulted: equation numbers and the coefficients themselves are unchecked.
+//! The material factors (a, b), F_P and F_L agree exactly with IDAES.
 //!
 //! TURTON set (Turton, Bailie, Whiting, Shaeiwitz, Akinc, "Analysis, Synthesis and Design of Chemical
 //! Processes", Prentice Hall, Appendix A; 3rd/4th edition table and figure numbers not checked):
@@ -32,8 +39,8 @@
 //! bare module C_BM = Cp0 (B1 + B2 F_M F_P), B = (1.63, 1.66);
 //! F_M for same-material shell and tube: CS 1.00, SS 2.73, Ni alloy (Monel) 3.73, Ti 11.4.
 //! The independent implementation "eqcost" gives, for 100 m^2 CS at 20 barg, Cp0 25323 USD,
-//! F_P 1.07321, C_BM 86393 USD; the tests check these. K, C, B and F_M other than CS were not checked
-//! against the book.
+//! F_P 1.07321, C_BM 86393 USD; the tests check these. K, C and B are confirmed only by this third-party
+//! worked example (not by the book; open item for the maintainer); F_M other than CS were not checked.
 //!
 //! Derivatives: dC_BM/dA in USD/m^2 at fixed material, pressure and length, exact (analytic); zero in
 //! the clamped region below the lower area limit (the cost is flat there, as charged).
@@ -49,6 +56,8 @@ pub const SEIDER_AMIN_FT2: f64 = 150.0;
 pub const SEIDER_AMAX_FT2: f64 = 12000.0;
 /// Default bare-module factor (dimensionless).
 pub const SEIDER_F_BM: f64 = 3.17;
+/// Lower end of the stated validity range of the Seider pressure factor [psig].
+pub const SEIDER_PMIN_PSIG: f64 = 100.0;
 
 /// Exchanger type (Seider base-cost coefficient set).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -127,10 +136,17 @@ pub fn seider_length_factor(tube_length_ft: u32) -> Option<f64> {
 }
 
 /// F_P = 0.9803 + 0.018 (P/100) + 0.0017 (P/100)^2, P in psig (dimensionless result).
-/// Stated validity 100-2000 psig; evaluated for any P.
+/// Stated validity 100-2000 psig; evaluated for any P (values below 100 psig are unchanged;
+/// [`seider_pressure_below_range`] flags them).
 pub fn seider_pressure_factor(p_psig: f64) -> f64 {
     let x = p_psig / 100.0;
     0.9803 + 0.018 * x + 0.0017 * x * x
+}
+
+/// True if `p_psig` [psig] is below the stated lower validity limit [`SEIDER_PMIN_PSIG`] = 100 psig of the
+/// Seider pressure factor (F_P is then extrapolated, like `above_range` for the area).
+pub fn seider_pressure_below_range(p_psig: f64) -> bool {
+    p_psig < SEIDER_PMIN_PSIG
 }
 
 /// Bare-module cost `C_BM = C_B (F_BM + F_L F_P F_M - 1)` [USD, CE 567] and dC_BM/dA [USD/m^2].

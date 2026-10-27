@@ -5,9 +5,12 @@ partial derivatives dL/da = (ln(a/b) - (a-b)/a)/ln(a/b)^2, dL/db = ((a-b)/b - ln
 evaluated at mp.dps = 50 (the cancellation near a = b is harmless at that precision; for
 a == b the limits 1/2, 1/2 are used). Cases: ordinary ratios, extreme ratios (1e-6 .. 1e6),
 and pairs straddling the series switch |a-b| < 1e-4 (a+b)/2 at relative differences from 1e-12 to 1e-2.
+Sweeps (added after review): "sweep_rel_diff" has 240 log-spaced |a-b|/mean from 1e-9 to 1.999999 (mean 20,
+alternating sign of a-b) and "sweep_ratio" has 241 log-spaced a/b from 1e-6 to 1e6 (b = 1 and a = 1 branches).
 Run: python library/tests/generators/lmtd.py
 """
 import mpmath as mp
+import numpy as np
 
 from _common import write
 
@@ -30,8 +33,14 @@ for rel in (1e-12, 1e-8, 1e-6, 1e-5, 5e-5, 9.9e-5, 1.01e-4, 2e-4, 1e-3, 1e-2):
     m = 20.0
     d = rel * m                           # |a-b| = rel * mean
     straddle.append((m + d / 2, m - d / 2))
-cases = {"ordinary_and_extreme": [], "switch_region": []}
-for key, ps in (("ordinary_and_extreme", pairs), ("switch_region", straddle)):
+sweep_rel = []
+for i, rel in enumerate(np.geomspace(1e-9, 1.999999, 240)):
+    d = float(rel) * 20.0 * (1 if i % 2 == 0 else -1)
+    sweep_rel.append((20.0 + d / 2, 20.0 - d / 2))
+sweep_ratio = [(float(r), 1.0) for r in np.geomspace(1e-6, 1e6, 241)]
+cases = {"ordinary_and_extreme": [], "switch_region": [], "sweep_rel_diff": [], "sweep_ratio": []}
+for key, ps in (("ordinary_and_extreme", pairs), ("switch_region", straddle), ("sweep_rel_diff", sweep_rel),
+                ("sweep_ratio", sweep_ratio)):
     for a, b in ps:
         L, La, Lb = exact(a, b)
         cases[key].append({"a": a, "b": b, "L": L, "dLda": La, "dLdb": Lb,

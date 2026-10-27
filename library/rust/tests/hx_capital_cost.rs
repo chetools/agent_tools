@@ -9,6 +9,8 @@ const TOL_DERIV: f64 = 1e-11;
 const TOL_EQCOST: f64 = 3e-3;
 /// Central finite difference of the cost, relative, step 1e-4 A.
 const TOL_FD: f64 = 1e-6;
+/// Floating head, BioSTEAM (CE 567) vs IDAES SSLW (CE 500) after the index shift (measured 4.9e-5), relative.
+const TOL_INDEX_SHIFT: f64 = 6e-5;
 /// Capital recovery factor vs 50-digit values, relative.
 const TOL_CRF: f64 = 1e-13;
 
@@ -185,4 +187,34 @@ fn capital_recovery_factor_vs_mpmath() {
     assert!(seider_bare_module_cost(0.0, HxType::UTube, 0.0, 0.0, 1.0, 1.0, 3.17).cost_usd.is_nan());
     assert!(turton_bare_module_cost(-1.0, 1.0, 1.0, TURTON_K, TURTON_B, 10.0, 1000.0).dcost_da.is_nan());
     println!("VERIFY hx_capital_cost crf max_rel_err={worst:e}");
+}
+
+#[test]
+fn seider_pressure_below_range_flag() {
+    assert_eq!(SEIDER_PMIN_PSIG, 100.0);
+    let flags: Vec<bool> = [0.0, 99.999, 100.0, 300.0, 2000.0].iter().map(|&p| seider_pressure_below_range(p)).collect();
+    assert_eq!(flags, [true, true, false, false, false]);
+    assert_eq!(seider_pressure_factor(50.0), 0.9803 + 0.018 * 0.5 + 0.0017 * 0.25); // values unchanged below range
+}
+
+/// BioSTEAM 12.0310 (CE 567) vs IDAES SSLW 11.9052 (CE 500): the difference is ln(567/500), so the costs
+/// agree after the index shift. (Fixed-head slope and U-tube intercept differences are open items.)
+#[test]
+fn floating_head_intercepts_differ_by_cost_index_shift() {
+    let r = load();
+    let idaes = &r["cases"]["published"]["idaes_sslw_cb"];
+    let i: Vec<f64> = idaes["floating_head"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+    let ce = f(idaes, "ce_basis");
+    let [c0, c1, c2] = HxType::FloatingHead.seider_cb();
+    assert_eq!((c1, c2), (i[1], i[2]));
+    let diff = c0 - i[0] - (SEIDER_CE_BASIS / ce).ln();
+    let mut worst = 0f64;
+    for af in [150.0f64, 1000.0, 12000.0] {
+        let lg = af.ln();
+        let bio = (c0 + c1 * lg + c2 * lg * lg).exp();
+        let ide = (i[0] + i[1] * lg + i[2] * lg * lg).exp() * SEIDER_CE_BASIS / ce;
+        worst = worst.max((bio / ide - 1.0).abs());
+    }
+    println!("VERIFY hx_capital_cost floating_head_index_shift intercept_diff_minus_ln_ratio={diff:e} max_rel_cost_diff={worst:e}");
+    assert!(diff.abs() < 1e-4 && worst < TOL_INDEX_SHIFT);
 }

@@ -72,7 +72,7 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `lmtd` returns NaN | A terminal difference is <= 0 (temperature cross) or not finite | Treat as infeasible; check stream temperatures and flow arrangement. |
-| LMTD derivative differs from a finite difference at the 1e-8 level near equal terminal differences | Cancellation in the closed form just above the series switch (4.9e-9 at the threshold) | Expected; finite differences across the switch also lose accuracy. |
+| LMTD derivative differs from a finite difference at the 1e-8 level near equal terminal differences | The analytic derivative is accurate to about 3e-12 relative (measured against 50-digit values for \|d\|/m from 1e-9 to 2); the finite difference is the less accurate side (cancellation in the difference quotient) | Trust the analytic derivative; use a central difference with a step of about 1e-4 of the value. |
 | `hx_capital_cost` has zero gradient for small exchangers | Area below the correlation range: the cost of the lower limit is charged (`clamped_below`) | Bound the area from below at the limit, or use a different cost law. |
 | Seider and IDAES/Turton costs differ by a factor | Different cost-index years (Seider CE 567 here, IDAES CE 500, Turton CEPCI 397) | Escalate with index_new / index_basis before comparing. |
 | `pinch_targets` pinch is at the highest or lowest temperature | Threshold problem (only hot or only cold utility needed) | No true pinch; read the targets and `heat_flow`. |

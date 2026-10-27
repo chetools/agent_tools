@@ -5,8 +5,8 @@ import pytest
 from conftest import load_reference, python_example, rust_example
 
 from agent_tools.process.hx_capital_cost import (
-    M2_TO_FT2, SEIDER_AMAX_FT2, SEIDER_AMIN_FT2, TURTON_AMAX_M2, capital_recovery_factor,
-    seider_bare_module_cost, seider_length_factor, seider_material_coeffs, seider_pressure_factor,
+    M2_TO_FT2, SEIDER_AMAX_FT2, SEIDER_AMIN_FT2, SEIDER_CB, SEIDER_CE_BASIS, SEIDER_PMIN_PSIG, TURTON_AMAX_M2, capital_recovery_factor,
+    seider_bare_module_cost, seider_length_factor, seider_material_coeffs, seider_pressure_below_range, seider_pressure_factor,
     turton_bare_module_cost, turton_material_factor, turton_pressure_factor)
 
 TOL_COST = 1e-12     # cost vs independent re-implementation, relative
@@ -14,6 +14,7 @@ TOL_DERIV = 1e-11    # dC/dA vs complex step, relative to max(|dC/dA|, 1e-3)
 TOL_EQCOST = 3e-3    # Turton eqcost published case (source project's bound; eqcost rounds constants)
 TOL_FD = 1e-6        # central finite difference, relative
 TOL_CRF = 1e-13      # capital recovery factor vs 50-digit values, relative
+TOL_INDEX_SHIFT = 6e-5   # floating head, BioSTEAM (CE 567) vs IDAES SSLW (CE 500) after the index shift (measured 4.9e-5)
 TOL_RUST = 1e-13     # Python vs Rust example, relative
 
 REF = load_reference("hx_capital_cost")["cases"]
@@ -129,3 +130,35 @@ def test_python_vs_rust_example():
     worst = max(rel(py[k], rs[k]) for k in ("seider_cost", "seider_dcost_da", "turton_cost", "turton_dcost_da", "crf"))
     print(f"VERIFY hx_capital_cost python_vs_rust max_rel_diff={worst:e}")
     assert worst < TOL_RUST
+
+
+def test_unknown_exchanger_type_raises_value_error():
+    with pytest.raises(ValueError):
+        seider_bare_module_cost(100.0, "kettle", 0.0, 0.0, 1.0, 1.0)
+    with pytest.raises(ValueError):          # also for an invalid area: the type is checked first
+        seider_bare_module_cost(-1.0, "kettle", 0.0, 0.0, 1.0, 1.0)
+
+
+def test_seider_pressure_below_range_flag():
+    assert SEIDER_PMIN_PSIG == 100.0
+    assert [seider_pressure_below_range(p) for p in (0.0, 99.999, 100.0, 300.0, 2000.0)] == [True, True, False, False, False]
+    assert seider_pressure_factor(50.0) == 0.9803 + 0.018 * 0.5 + 0.0017 * 0.25     # values unchanged below range
+
+
+def test_floating_head_intercepts_differ_by_cost_index_shift():
+    """BioSTEAM 12.0310 (CE 567) vs IDAES SSLW 11.9052 (CE 500): the difference is ln(567/500), so the
+    costs agree after the index shift. (Fixed-head slope and U-tube intercept differences are open items.)"""
+    idaes = REF["published"]["idaes_sslw_cb"]
+    c0, c1, c2 = SEIDER_CB["floating_head"]
+    i0, i1, i2 = idaes["floating_head"]
+    assert (c1, c2) == (i1, i2)
+    shift = math.log(SEIDER_CE_BASIS / idaes["ce_basis"])
+    worst = 0.0
+    for af in (150.0, 1000.0, 12000.0):
+        lg = math.log(af)
+        bio = math.exp(c0 + c1 * lg + c2 * lg * lg)
+        ide = math.exp(i0 + i1 * lg + i2 * lg * lg) * SEIDER_CE_BASIS / idaes["ce_basis"]
+        worst = max(worst, abs(bio / ide - 1.0))
+    print(f"VERIFY hx_capital_cost py_floating_head_index_shift intercept_diff_minus_ln_ratio={c0 - i0 - shift:e} "
+          f"max_rel_cost_diff={worst:e}")
+    assert abs(c0 - i0 - shift) < 1e-4 and worst < TOL_INDEX_SHIFT

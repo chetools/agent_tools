@@ -1,13 +1,12 @@
 //! Tests for process::lmtd against 50-digit mpmath reference data.
-use agent_tools::process::lmtd::{lmtd, LMTD_SERIES_THRESHOLD};
+use agent_tools::process::lmtd::lmtd;
 
 /// L relative error bound (measured worst case 5e-13, just above the switch).
 const TOL_L: f64 = 1e-11;
 /// Derivative absolute bound away from the switch (measured worst case 5e-12).
 const TOL_D: f64 = 1e-11;
-/// Derivative bound for 1e-4 <= |a-b|/mean < 1e-3: the closed form loses digits to cancellation
-/// there (measured 4.9e-9 just above the threshold).
-const TOL_D_JUST_ABOVE: f64 = 1e-8;
+/// Sweeps: L and both derivatives, relative to the 50-digit value.
+const TOL_SWEEP: f64 = 5e-12;
 /// Central finite-difference check, absolute (step 1e-4 on values ~20).
 const TOL_FD: f64 = 5e-7;
 
@@ -21,12 +20,11 @@ fn run(group: &str) {
     let (mut el, mut ed) = (0f64, 0f64);
     for c in r["cases"][group].as_array().unwrap() {
         let f = |k: &str| c[k].as_f64().unwrap();
-        let (a, b, rel) = (f("a"), f("b"), f("rel_diff"));
+        let (a, b) = (f("a"), f("b"));
         let (l, la, lb) = lmtd(a, b);
         let e_l = (l - f("L")).abs() / f("L");
         let e_d = (la - f("dLda")).abs().max((lb - f("dLdb")).abs());
-        let tol_d = if (LMTD_SERIES_THRESHOLD..1e-3).contains(&rel) { TOL_D_JUST_ABOVE } else { TOL_D };
-        assert!(e_l < TOL_L && e_d < tol_d, "{group} a={a} b={b}: eL={e_l:e} eD={e_d:e}");
+        assert!(e_l < TOL_L && e_d < TOL_D, "{group} a={a} b={b}: eL={e_l:e} eD={e_d:e}");
         el = el.max(e_l);
         ed = ed.max(e_d);
     }
@@ -41,6 +39,35 @@ fn ordinary_and_extreme_ratios() {
 #[test]
 fn switch_region() {
     run("switch_region");
+}
+
+/// Review finding: derivatives were 8.2e-9 off just above the series switch (cancellation in ln(a/b)).
+fn run_sweep(group: &str) {
+    let r = load();
+    let cases = r["cases"][group].as_array().unwrap();
+    assert!(cases.len() >= 200);
+    let (mut el, mut ed) = (0f64, 0f64);
+    for c in cases {
+        let f = |k: &str| c[k].as_f64().unwrap();
+        let (a, b) = (f("a"), f("b"));
+        let (l, la, lb) = lmtd(a, b);
+        let e_l = (l - f("L")).abs() / f("L");
+        let e_d = ((la - f("dLda")) / f("dLda")).abs().max(((lb - f("dLdb")) / f("dLdb")).abs());
+        assert!(e_l < TOL_SWEEP && e_d < TOL_SWEEP, "{group} a={a} b={b}: eL={e_l:e} eD={e_d:e}");
+        el = el.max(e_l);
+        ed = ed.max(e_d);
+    }
+    println!("VERIFY lmtd {group} n={} max_rel_err_L={el:e} max_rel_err_dL={ed:e}", cases.len());
+}
+
+#[test]
+fn sweep_rel_diff() {
+    run_sweep("sweep_rel_diff");
+}
+
+#[test]
+fn sweep_ratio() {
+    run_sweep("sweep_ratio");
 }
 
 #[test]

@@ -8,7 +8,7 @@ from agent_tools.process.lmtd import LMTD_SERIES_THRESHOLD, lmtd
 
 TOL_L = 1e-11               # L relative (measured worst case 5e-13, just above the switch)
 TOL_D = 1e-11               # derivative absolute away from the switch (measured 5e-12)
-TOL_D_JUST_ABOVE = 1e-8     # for 1e-4 <= rel diff < 1e-3: cancellation in the closed form (measured 4.9e-9)
+TOL_SWEEP = 5e-12           # sweeps: L and both derivatives, relative to the 50-digit value
 TOL_FD = 5e-7               # central finite difference, absolute
 TOL_RUST = 1e-14            # Python vs Rust example, relative
 
@@ -20,10 +20,24 @@ def test_against_mpmath(group):
         L, La, Lb = lmtd(c["a"], c["b"])
         e_l = abs(L - c["L"]) / c["L"]
         e_d = max(abs(La - c["dLda"]), abs(Lb - c["dLdb"]))
-        tol_d = TOL_D_JUST_ABOVE if LMTD_SERIES_THRESHOLD <= c["rel_diff"] < 1e-3 else TOL_D
-        assert e_l < TOL_L and e_d < tol_d, (c, e_l, e_d)
+        assert e_l < TOL_L and e_d < TOL_D, (c, e_l, e_d)
         el, ed = max(el, e_l), max(ed, e_d)
     print(f"VERIFY lmtd py_{group} max_rel_err_L={el:e} max_abs_err_dL={ed:e}")
+
+
+@pytest.mark.parametrize("group", ["sweep_rel_diff", "sweep_ratio"])
+def test_sweeps_against_mpmath(group):
+    """Review finding: derivatives were 8.2e-9 off just above the series switch (cancellation in ln(dt1/dt2))."""
+    cases = load_reference("lmtd")["cases"][group]
+    assert len(cases) >= 200
+    el = ed = 0.0
+    for c in cases:
+        L, La, Lb = lmtd(c["a"], c["b"])
+        e_l = abs(L - c["L"]) / c["L"]
+        e_d = max(abs(La - c["dLda"]) / c["dLda"], abs(Lb - c["dLdb"]) / c["dLdb"])
+        assert e_l < TOL_SWEEP and e_d < TOL_SWEEP, (c, e_l, e_d)
+        el, ed = max(el, e_l), max(ed, e_d)
+    print(f"VERIFY lmtd py_{group} n={len(cases)} max_rel_err_L={el:e} max_rel_err_dL={ed:e}")
 
 
 def test_derivatives_vs_finite_differences_both_sides_of_switch():

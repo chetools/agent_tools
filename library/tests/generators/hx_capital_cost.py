@@ -13,7 +13,14 @@ Contents
       tests, 3e-3 relative, is the source project's; the differences are due to rounded constants).
     - Seider base-cost coefficients (c0, c1, c2) as coded in BioSTEAM (CE 567); Turton K, B, C and
       F_M: from the source project. Not checked against the books; IDAES (3rd ed., CE 500) lists a
-      different floating-head intercept (11.9052).
+      different floating-head intercept (11.9052); see "Coefficient provenance" below.
+  Coefficient provenance (PR review, open items for the maintainer; no coefficient was changed):
+    - floating head: BioSTEAM 12.0310 (CE 567) vs IDAES SSLW 11.9052 (CE 500) differ by ln(567/500) = 0.1258, so
+      the costs agree to 4.9e-5 after the cost-index shift (tested; "idaes_sslw_cb" above);
+    - fixed head: slope -0.9228 (BioSTEAM; a Penn lecture snippet, Lewin FOCAPD 2004, agrees) vs -0.8228 (IDAES);
+      unconfirmed which is right, the IDAES value is probably a typo;
+    - U-tube: intercepts differ by 0.1658, not the index shift 0.1258 (4.1 % cost difference); unresolved;
+    - Turton K, C, B confirmed only by a third-party worked example (eqcost, above), not by the book.
 * seider_values / turton_values: C_BM and dC_BM/dA from an independent re-implementation below in
   the ft^2 domain, with the derivative by complex-step differentiation (no truncation error).
 * crf: capital recovery factor from 50-digit mpmath.
@@ -105,6 +112,10 @@ for i, n in [(0.1, 10), (0.08, 15), (0.15, 20), (0.05, 25.5), (0.0, 10), (1e-9, 
 published = {
     "seider_fm": SEIDER_FM, "seider_fp_coeffs": SEIDER_FP, "seider_fl": {str(k): v for k, v in SEIDER_FL.items()},
     "turton_eqcost": {"area_m2": 100.0, "p_barg": 20.0, "cp0": 25323.0, "fp": 1.07321, "cbm": 86393.0},
+    # IDAES SSLW base-cost coefficients (3rd ed., CE 500) as read by the PR reviewer from idaes/models/costing/SSLW.py
+    # (GitHub main) and its docs page; (c0, c1, c2) for A in ft^2. NOT re-read by this generator's author.
+    "idaes_sslw_cb": {"ce_basis": 500, "floating_head": [11.9052, -0.8709, 0.09005],
+                      "fixed_head": [11.2927, -0.8228, 0.09861], "u_tube": [11.3852, -0.9186, 0.09790]},
 }
 write("hx_capital_cost", "library/tests/generators/hx_capital_cost.py",
       {"derivative": "complex step h=1e-30", "crf": "mpmath 50 digits", "seider_ce_basis": 567,

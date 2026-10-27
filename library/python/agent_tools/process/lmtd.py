@@ -38,5 +38,6 @@ def lmtd(dt1, dt2):
         L = m - d * d / (12.0 * m)
         return (L, 0.5 - d / (6.0 * m) + d * d / (24.0 * m * m),
                 0.5 + d / (6.0 * m) + d * d / (24.0 * m * m))
-    lr = math.log(dt1 / dt2)
+    # |d| < m  =>  d/dt2 in (-1, 2): log1p is exact where log(dt1/dt2) would cancel
+    lr = math.log1p(d / dt2) if abs(d) < m else math.log(dt1 / dt2)
     return (d / lr, (lr - d / dt1) / (lr * lr), (d / dt2 - lr) / (lr * lr))
