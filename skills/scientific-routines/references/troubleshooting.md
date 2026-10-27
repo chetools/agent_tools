@@ -50,7 +50,7 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Derivative of `abs` or a branch has the wrong sign near a kink | The derivative follows the branch taken; at exactly 0 `abs` uses the right-hand derivative | Avoid evaluating at the kink. |
 | Second derivative is 0 or wrong | Single `Dual<f64>` used | Nest: `Dual<Dual<f64>>` with seeds `Dual::new(Dual::new(x, 1.0), Dual::new(1.0, 0.0))`. |
 
-## Linear algebra (`lu_dense`, `cholesky`)
+## Linear algebra (`lu_dense`, `cholesky`, `block_tridiagonal`)
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
@@ -58,6 +58,8 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | `lu_dense` succeeds but the solution is huge or the residual is large | Nearly singular matrix (not detected) | Compute the residual `A x - b`; estimate the condition number; expect a relative error up to about `eps * cond`. |
 | `cholesky` fails with "not positive definite" | Matrix is not SPD, or only semidefinite, or too ill-conditioned in f64 | Check symmetry and eigenvalues; add a small diagonal jitter (for Gaussian-process covariances, a nugget) deliberately. |
 | `cholesky` result differs from NumPy at the 1e-10 level | Ill-conditioned matrix (for example Hilbert n = 10): errors scale with `eps * cond` | Expected; compare the residual `L L^T - A` instead. |
+| `block_tridiag_factor` fails with "diagonal block i ... singular" although the full matrix is nonsingular | No pivoting across blocks: the eliminated block `M_i = D_i - L C` is singular (for example a zero diagonal block) | Reorder or merge unknowns so the diagonal blocks dominate, or use a banded/dense solver (`scipy.linalg.solve_banded`, `lu_dense`). |
+| `block_tridiag_solve` succeeds but the residual is large, or `growth` is far above 1 | Nearly singular `M_i` (not detected); the matrix is not block diagonally dominant | Compute `A x - b`; compare with a banded or dense solve; reorder unknowns. |
 
 ## Random numbers (`splitmix64`, `mulberry32`)
 
