@@ -81,6 +81,16 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | `success = false`, "no progress" | `gtol` is below what rounding allows at this `x` and `f` (`f` flat to rounding, gradient at rounding level): a step left `x` unchanged, or `max|g|` reached no new low in 20 steps | The returned `x` is the last accepted point (at rounding level); raise `gtol` (`grad_norm` shows what was attainable) or rescale `x` and `f`. |
 | `success = false`, "invalid option" and `nfev = 0` | `gtol` not finite or not > 0, or `max_iter` < 1 | Pass a positive finite `gtol` and `max_iter >= 1`. |
 
+## Gaussian processes and design (`gp_matern52`, `imse_batch`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `gp_fit` reports `success = false`, "line search failed", but the NLL agrees with other starts | Ill-conditioned covariance (near-duplicate inputs, tiny noise): the NLL is flat to rounding at the optimum | Expected; compare `start_nll` across starts. Fix the noise to a realistic value or remove duplicates if it matters. |
+| Fitted length scale at about 0.02 or 5 (or noise at 1e-3 std(y)) | Hyperparameter on its bound: inputs not scaled to [0, 1], or the data do not determine it | Scale inputs, widen `log_length_bounds`, or fix the noise. |
+| One start ends with a much larger NLL (for example 45 vs 9.75) | Local optimum of the marginal likelihood | Expected; the best start is kept. Add `n_random_starts` for more coverage. |
+| `gp_build` returns an error / raises "not positive definite" | Duplicate inputs with `noise_sd = 0` | Use a positive `noise_sd`. |
+| IMSE batch picks differ between Rust and Python | Two candidates with nearly equal scores (symmetric grids or data) | Compare `first_scores`; ties go to the first index. |
+
 ## Interpolation (`cubic_hermite`, `hermite_extremum`)
 
 | Symptom | Likely cause | Fix |
