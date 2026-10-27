@@ -164,3 +164,187 @@ verified_rtol = [3.7e-16, 4.8e-16]
 tests = ["formulas_vs_independently_reimplemented_reference","dilute_sangani_acrivos_vs_hasimoto","gebart_asymptote_near_close_packing","ergun_laminar_turbulent_limits","kozeny_carman_equals_blake_kozeny_ergun_viscous","fit_kozeny_constant_vs_scipy_curve_fit","nan_outside_domain","python_vs_rust"]
 source = "Kozeny 1927 (Sitzungsber. Akad. Wiss. Wien IIa 136:271) / Carman 1937 (Trans. Inst. Chem. Eng. 15:150), K = 5; Ergun 1952 (Chem. Eng. Prog. 48(2):89), 150 and 1.75; Gebart 1992 (J. Compos. Mater. 26:1100); Sangani & Acrivos 1982 (Int. J. Multiphase Flow 8:193); Gebart and Sangani-Acrivos constants read from Table 1 of Yazdchi, Srivastava & Luding 2011 (Int. J. Multiphase Flow); ported from chetools/claude porous-media-lbm"
 notes = "One family entry: the five functions share conventions (SI units, NaN outside the mathematical domain, no clipping) and one file pair. Reference data are the published formulas re-implemented in a different algebraic form by the generator; no paper table values (none could be verified). Recommended ranges are documented, not enforced: Gebart is a close-packing lubrication model, Sangani-Acrivos a dilute series truncated at O(phi^4) (accuracy at large phi not verified), Ergun's data range not verified. fit_kozeny_constant is an exact per-measurement inversion, not a least-squares fit. Changes from the source: kozeny_carman takes a_s explicitly (the source defaulted to the 2D disk value 4/d) and gebart_hexagonal was added; out-of-domain inputs give NaN."
+
+[[routine]]
+id = "rtd_analysis"
+name = "Residence-time distribution analysis: moments, tail extrapolation, dispersion and tanks-in-series fits"
+area = "stats"
+problem_class = "residence_time_distribution"
+suitable_for = ["tracer_pulse_response","mean_and_variance_with_truncated_tail","axial_dispersion_Pe","tanks_in_series_N","two_detector_dispersion"]
+equivalent = "none in SciPy; comparisons use scipy.optimize.curve_fit and scipy.integrate"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/rtd_analysis.rs"
+python = "library/python/agent_tools/stats/rtd_analysis.py"
+example = "library/examples/rust/rtd_analysis.rs"
+example_python = "library/examples/python/rtd_analysis.py"
+features = ["trapezoid_moments","exponential_tail_extrapolation","square_pulse_correction","tanks_in_series_E","open_open_dispersion_E","closed_closed_variance","moment_fits_Pe_N","least_squares_fits_golden_section","two_plane_dispersion"]
+units = "t in s, C any consistent unit, E in 1/s, theta and Pe and N dimensionless"
+verified_rtol = [1e-9, 5e-2]
+tests = ["moments_vs_scipy_1e-9","tail_extrapolation_exact_exponential","pulse_correction_closed_form","two_plane_exact","moment_inversion_exact","closed_closed_variance_vs_pole_series","lsq_vs_curve_fit_1e-5","noisy_3pct_lsq_vs_moments","failure_modes","python_vs_rust"]
+source = "Levenspiel, Chemical Reaction Engineering 3rd ed. ch. 11 and 13; Fogler, Elements of Chemical Reaction Engineering ch. 18-19 (equation numbers not checked); ported from chetools/claude porous-media-lbm (tail_fit, rtd_moments, fit_dispersion, E_dispersion, E_tanks); moment inversions and least-squares fits are new"
+notes = "Split decision: one entry, because moments, model curves and fits share the same definitions and are used together. open-open E is the unbounded-medium solution seen as concentration (mean 1+2/Pe, variance 2/Pe+8/Pe^2); closed-closed is provided as moments only (no E curve). Tail extrapolation is exact for exponential tails but overestimates the variance by about 4 % for tanks records cut at 2 tau (gamma tail is not exponential); noisy tails (negative samples) disable it. Moments of noisy records are biased high (27 % in N for 3 % noise), use fit_lsq there. fit_lsq is a nested golden-section search: assumes unimodality, flags a parameter at the edge of [0.05, 1e4]. taylor_aris_plates from the source was not ported (geometry-specific correlation)."
+
+[[routine]]
+id = "lhs_maximin"
+name = "Maximin Latin hypercube design (best of k random LHS)"
+area = "stats"
+problem_class = "space_filling_design"
+suitable_for = ["initial_design","computer_experiments","surrogate_training_points","bit_identical_across_languages"]
+equivalent = "scipy.stats.qmc.LatinHypercube (plain; optimization='random-cd' optimizes discrepancy, not maximin)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/lhs_maximin.rs"
+python = "library/python/agent_tools/stats/lhs_maximin.py"
+example = "library/examples/rust/lhs_maximin.rs"
+example_python = "library/examples/python/lhs_maximin.py"
+features = ["latin_property","random_position_in_slice","min_distance_reported","seeded_bit_identical"]
+units = "dimensionless: points in the unit cube [0,1)^d (scale to physical ranges as lo + x*(hi-lo)); min_distance in unit-cube length"
+valid_range = "n >= 1, d >= 1, tries >= 1; tested n = 1..100, d = 1..10, tries up to 200"
+verified_rtol = [0, 1e-14]
+tests = ["latin_property_n1_to_100_d1_to_10","designs_vs_independent_impl_bit_exact","monotone_in_tries","seed_study_vs_scipy_qmc_n50_d10","python_vs_rust_bit_identical"]
+source = "McKay, Beckman & Conover, Technometrics 21 (1979) 239-245 (LHS); Johnson, Moore & Ylvisaker, J. Stat. Plann. Inference 26 (1990) 131-148 (maximin distance designs); Morris & Mitchell, J. Stat. Plann. Inference 43 (1995) 381-402 (maximin criterion; their annealing search is NOT implemented); ported from chetools/claude sequential-design (own code)"
+notes = "Plain best-of-k random search, default k = 50 in the source (no default in the Rust signature; pass tries). Points sit at a random, not centred, position in each slice. Pass a SplitMix64 (the source uses from_seed_stream(seed, stream)); the same generator state gives identical designs in Rust and Python. Larger tries never lowers the minimum distance for the same generator state, but the gain is slow: at n = 50, d = 10 the mean min distance is about 0.50 for 1 candidate and 0.63 for 50, while scipy optimization='random-cd' reaches about 0.72 (different criterion, same test seeds). Use Morris-Mitchell style exchange optimization for a real maximin optimum. n = 1 returns min_distance 1.0 by convention."
+
+[[routine]]
+id = "bfgs"
+name = "BFGS minimization with Armijo backtracking"
+area = "optimize"
+problem_class = "unconstrained_minimization"
+suitable_for = ["smooth","gradient_available","small_to_moderate_n","gp_hyperparameters"]
+equivalent = "scipy.optimize.minimize(method='BFGS')"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/optimize/bfgs.rs"
+python = "library/python/agent_tools/optimize/bfgs.py"
+example = "library/examples/rust/bfgs.rs"
+example_python = "library/examples/python/bfgs.py"
+features = ["fg_callback_value_and_gradient","non_finite_trial_points_rejected","result_with_nit_nfev"]
+units = "x, f arbitrary; gtol in units of f per unit of x (max-norm of the gradient)"
+valid_range = "n up to tens (dense O(n^2) inverse Hessian); tested n = 2, 5, 10"
+verified_rtol = [1e-12, 1e-8]
+tests = ["quadratic_n5_exact","quadratic_n8_cond1e3_cost","rosenbrock_2d","extended_rosenbrock_n10","scaled_valley_a1000","vs_scipy_bfgs_gtol_1e-10","failure_modes","stall_stop","option_validation","ill_conditioned_8_seeds","python_vs_rust_iterates"]
+source = "Nocedal & Wright, Numerical Optimization, 2nd ed., Alg. 6.1, eq. 6.17, Alg. 3.1; ported from chetools/claude sequential-design (own code)"
+notes = "Unconstrained only (the source's bounds were a problem-specific tanh transform, not ported). Defaults: gtol = 1e-5 (max-norm, strict), max_iter = 200, Armijo c1 = 1e-4, halving until step < 1e-10, update skipped if s.y <= 1e-12 (absolute). Identity initial inverse Hessian. fg may return inf/NaN to reject a trial point. Evaluations (nfev) relative to SciPy (no Wolfe line search): 1.3 to 2.4 times on the four original cases (the 5-D quadratic is the 2.4: 26 vs 11), 2.9 times (50 vs 17, both languages) on the 8-D quadratic with eigenvalues 1 to 1e3 (quadratic8_cond1e3), and a reviewer measured 5 times (80 vs 16) on another such quadratic, so expect up to about 5 times on ill-conditioned quadratics. Line search also accepts a trial point by the Hager-Zhang approximate-Wolfe condition when f is flat to rounding (all 8 seeds of an ill-conditioned 8-D quadratic converge at gtol 1e-10, 16 runs, nit 14 to 17, nfev 49 to 52). Stops with success = false and a message (no progress) if a step leaves x unchanged or max|g| reaches no new low in 20 steps (gtol below attainable accuracy), or if gtol is not finite and > 0 or max_iter < 1. Python and Rust give identical iterates on the Rosenbrock cases and the 5-D quadratic when the objective is summed in the same order (shown in the examples); a different summation order in the objective, such as NumPy's @, gives results that differ in the last digits and may differ in nit."
+
+[[routine]]
+id = "gp_matern52"
+name = "Gaussian-process regression, Matern-5/2 ARD kernel, maximum-likelihood hyperparameters"
+area = "stats"
+problem_class = "gaussian_process_regression"
+suitable_for = ["surrogate_models","sequential_design","small_n_smooth_responses","uncertainty_of_predictions"]
+equivalent = "sklearn GaussianProcessRegressor(Matern(nu=2.5) ARD + WhiteKernel, normalize_y=True)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/gp_matern52.rs"
+python = "library/python/agent_tools/stats/gp_matern52.py"
+example = "library/examples/rust/gp_matern52.rs"
+example_python = "library/examples/python/gp_matern52.py"
+features = ["ard_length_scales","noise_fitted_or_fixed","bounded_hyperparameters_tanh","multi_start_with_seeded_random_starts","log_marginal_likelihood","predict_mean_variance","posterior_cross_covariance","analytic_nll_gradient"]
+units = "x any units (length scales in units of x; default bounds assume x scaled to [0,1]); mean, signal_sd, noise_sd in units of y; variances and covariances in units of y^2"
+valid_range = "n up to a few hundred (dense O(n^3)); tested d = 1, 2, 5, n = 8 to 40, cond(K) up to ~1e8"
+verified_rtol = [1e-13, 1e-7]
+tests = ["kernel_vs_bessel_matern","nll_and_gradient_vs_dense_fd","gradient_central_differences_both_sides","fit_vs_scipy_lbfgsb_three_cases","predict_vs_dense_solve","noise_free_interpolation","hard_d5_n40_close_points_tiny_noise","python_vs_rust"]
+source = "Rasmussen & Williams, Gaussian Processes for Machine Learning (2006), eqs. 4.17, 5.8, 5.9, Alg. 2.1; ported from chetools/claude sequential-design (own code)"
+notes = "y is standardised (mean, population std); a 1e-8 jitter (standardised variance) is always added to the diagonal. Hyperparameters boxed by a tanh transform (defaults: ell in [0.02, 5] x-units, signal_sd/std(y) in [0.1, 10], noise_sd/std(y) in [1e-3, 1]) and fitted by the library bfgs from starts ell = 0.1, 0.3, 1.0 (+ optional SplitMix64 random starts); best NLL kept. Near a bound the fitted value sits close to, not at, the bound. On ill-conditioned problems BFGS may stop with 'line search failed' at the optimum to rounding (success = false; hard5d Python case)."
+
+[[routine]]
+id = "imse_batch"
+name = "Greedy integrated-mean-squared-error batch selection"
+area = "stats"
+problem_class = "sequential_design_of_experiments"
+suitable_for = ["batch_sequential_design","active_learning_gp","global_surrogate_accuracy"]
+equivalent = "none in SciPy; brute-force greedy re-conditioning (test reference)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/imse_batch.rs"
+python = "library/python/agent_tools/stats/imse_batch.py"
+example = "library/examples/rust/imse_batch.rs"
+example_python = "library/examples/python/imse_batch.py"
+features = ["candidates_and_reference_points_separate","rank_one_covariance_downdate","variance_reduction_per_pick","first_step_score_map","replicates_allowed"]
+units = "covariances, noise variance and reductions in the same units (y^2 with gp_matern52.posterior_cov)"
+valid_range = "dense nc x nc and nr x nc matrices; O(batch (nc^2 + nr nc)); tested nc = 64, 100, nr = 40, 64, batch up to 4"
+verified_rtol = [1e-7, 1e-5]
+tests = ["vs_brute_force_reconditioning","downdate_vs_reconditioning","score_is_drop_in_average_variance","edge_cases","python_vs_rust"]
+source = "IMSE criterion: Sacks, Welch, Mitchell & Wynn, Statistical Science 4 (1989); greedy GP selection: Seo et al., IJCNN 2000; ported from chetools/claude sequential-design greedy_batch (own code)"
+notes = "Takes posterior covariance matrices (any GP), not points; use gp_matern52 posterior_cov(candidates, candidates) and posterior_cov(reference, candidates). Picks the first index on ties. Does not refit hyperparameters between picks. Agreement with the brute-force reference is limited by the conditioning of the re-conditioned GP (about 1e-8 relative in the tests, where the fitted noise sits on its lower bound)."
+
+[[routine]]
+id = "hermite_extremum"
+name = "Maximum or minimum of a piecewise cubic Hermite interpolant"
+area = "interpolate"
+problem_class = "interpolant_extremum"
+suitable_for = ["peak_of_ode_solution","accepted_steps_with_slopes","sharp_peaks","automatic_differentiation"]
+equivalent = "scipy.interpolate.CubicHermiteSpline + dense grid + scipy.optimize.minimize_scalar(bounded) in each interval"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/interpolate/hermite_extremum.rs"
+python = "library/python/agent_tools/interpolate/hermite_extremum.py"
+example = "library/examples/rust/hermite_extremum.rs"
+example_python = "library/examples/python/hermite_extremum.py"
+features = ["max_or_min","returns_location_value_interval","global_over_all_intervals","dual_numbers_envelope_theorem"]
+units = "t and returned t share a unit; y and returned value share a unit; dy = unit of y per unit of t"
+verified_rtol = [2e-16, 1e-12]
+tests = ["exact_cubic","sine_coarse_vs_scipy","narrow_gaussian_4th_order_convergence","edge_cases_ties_monotone_degenerate","ad_derivative_vs_finite_differences","python_vs_rust"]
+source = "Burden & Faires, Numerical Analysis, 9th ed., sec. 3.4; Press et al., Numerical Recipes, 3rd ed., eq. 5.6.4; ported and generalised from chetools/claude packed-bed-runaway hermite_peak (own code)"
+notes = "O(n), no iteration. Source searched only the two intervals around the largest sample; this version searches all intervals and supports min. Ties: smallest t wins and a knot beats an interior point of equal value. Only sign changes of the derivative count (discriminant > 0; the source used >= 0). Invalid input (n<2, unequal lengths, non-finite, t not strictly increasing) returns success=false. Rust is generic over Real (Dual); Python is float only. Expectation, not measured: the location of a flat peak is ill-conditioned (error up to about sqrt(eps)), the value is not."
+
+[[routine]]
+id = "cubic_hermite"
+name = "Piecewise cubic Hermite evaluator"
+area = "interpolate"
+problem_class = "hermite_interpolation"
+suitable_for = ["dense_output_from_values_and_slopes","ode_step_interpolation","automatic_differentiation"]
+equivalent = "scipy.interpolate.CubicHermiteSpline"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/interpolate/cubic_hermite.rs"
+python = "library/python/agent_tools/interpolate/cubic_hermite.py"
+example = "library/examples/rust/hermite_extremum.rs"
+example_python = "library/examples/python/hermite_extremum.py"
+features = ["extrapolates_end_cubics","single_piece_helper_hermite_piece","vectorised_python"]
+units = "t and x share a unit; y and result share a unit; dy = unit of y per unit of t"
+verified_rtol = [5e-16, 1e-13]
+tests = ["evaluator_vs_scipy_incl_extrapolation_and_knots","exact_cubic_reproduced","python_vs_rust"]
+source = "Burden & Faires, Numerical Analysis, 9th ed., sec. 3.4; ported from chetools/claude packed-bed-runaway hermite_peak (own code)"
+notes = "t strictly increasing is not checked (panics/raises only on length mismatch or n<2). x outside the data uses the first or last cubic; x equal to a knot uses the interval to its right. The example pair is shared with hermite_extremum."
+
+[[routine]]
+id = "rosenbrock23"
+name = "Adaptive Rosenbrock 2(3) stiff integrator (ode23s), generic over Real"
+area = "ode"
+problem_class = "stiff_ivp"
+suitable_for = ["small_stiff_systems","cheap_dense_jacobian","parametric_sensitivities_by_ad","moderate_accuracy_rtol_1e-3_to_1e-6"]
+equivalent = "MATLAB ode23s (no SciPy solve_ivp equivalent; closest stiff solvers are Radau and BDF)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/ode/rosenbrock23.rs"
+python = "library/python/agent_tools/ode/rosenbrock23.py"
+example = "library/examples/rust/rosenbrock23.rs"
+example_python = "library/examples/python/rosenbrock23.py"
+features = ["dense_jacobian_callback","optional_dfdt_or_fd_dfdt","per_component_atol","dual_number_derivatives_in_step_control","stores_t_y_dydt_for_hermite_dense_output","step_counts"]
+units = "t and y in the caller's units; rtol dimensionless; atol in units of y"
+verified_rtol = [1e-3, 1e-7]
+tests = ["decay_vs_exact","nonautonomous_vs_exact","robertson_vs_radau_1e5","van_der_pol_mu1000_vs_radau","tolerance_study_vs_radau_bdf","ad_vs_fd_exact_and_forward_sensitivity","failures_reported","python_vs_rust"]
+source = "Shampine & Reichelt, The MATLAB ODE Suite, SIAM J. Sci. Comput. 18(1), 1997; ported from chetools/claude packed-bed-runaway (integrate)"
+notes = "Second order: at the same rtol it takes many more steps than Radau (Robertson to 1e5 at rtol 1e-7: 9105 steps vs 372; Van der Pol mu=1000 to 3000 at 1e-7: 31183 vs 2290), so use it for rtol >= 1e-6 or when Dual sensitivities through the steps are wanted. Achieved error is 2 to 150 times rtol on the tested cases (local error control). Step control also tests the derivative parts of Dual states. No df/dt: autonomous (zero) by default; dfdt closure or fd_dfdt option for time-dependent f. Differences from the source: dense caller-supplied Jacobian, df/dt support, per-component atol, h0 default 1e-4*span, no hmax cap by default (source 0.05), Jacobian reused after a rejected step."
+
+[[routine]]
+id = "block_tridiagonal"
+name = "Block-tridiagonal LU (block Thomas), runtime block size"
+area = "linalg"
+problem_class = "block_tridiagonal_linear_solve"
+suitable_for = ["banded_jacobians_1d_discretisations","factor_once_solve_many","generic_over_real","dual_numbers"]
+equivalent = "numpy.linalg.solve on the assembled matrix; scipy.linalg.solve_banded"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/linalg/block_tridiagonal.rs"
+python = "library/python/agent_tools/linalg/block_tridiagonal.py"
+example = "library/examples/rust/block_tridiagonal.rs"
+example_python = "library/examples/python/block_tridiagonal.py"
+features = ["runtime_block_size","factor_once_solve_many","in_block_partial_pivoting","growth_indicator","singular_block_report","dual_entries"]
+units = "dimensionless (x has units of b / A)"
+verified_rtol = [1e-14, 1e-12]
+tests = ["block_dominant_m_nb_1_5_2_50_3_200_5_40","scalar_vs_classical_thomas","weak_dominance_laplacian","zero_diagonal_blocks_in_block_pivoting","singular_first_block_reported","dual_solution_derivative","python_vs_rust"]
+source = "Golub & Van Loan, Matrix Computations, 4th ed., Sec. 4.5.1; Press et al., Numerical Recipes, 3rd ed., Sec. 2.4; generalised from the 2x2 block solver of chetools/claude packed-bed-runaway"
+notes = "Blocks are row-major m*m in flat slices (lower[k]=block (k+1,k), upper[k]=block (k,k+1), nb-1 each). Pivoting only within diagonal blocks (lu_dense), none across blocks: needs block diagonal dominance, SPD or M-matrix structure. An exactly singular eliminated block fails with success=false even if the full matrix is nonsingular; a near-singular block is not detected, check `growth` (max ||C_i||_inf) and the residual. Uses LU solves instead of the source's explicit 2x2 inverses."
