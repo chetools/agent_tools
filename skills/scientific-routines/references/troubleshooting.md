@@ -66,3 +66,13 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
+
+## Interpolation (`cubic_hermite`, `hermite_extremum`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `hermite_extremum` returns `success = false` | Fewer than 2 points, unequal lengths, non-finite entries, or `t` not strictly increasing (for example a rejected-step duplicate time from an integrator) | Drop repeated times, sort, and check for NaN in `y` or `dy`. |
+| Peak lies at the first or last sample | The interpolant is monotone there, or the true peak is outside the sampled range | Extend the data; plot `y`; the endpoint is a legitimate answer for monotone data. |
+| Peak value changes noticeably when samples are added | Knots too coarse for the feature | Halve the spacing; the peak-value error should drop by about 16. |
+| Slopes inconsistent with values (visible kinks or overshoot) | `dy` is not the derivative of `y` (wrong units, or per step instead of per unit of `t`) | `dy` is `dy/dt` in unit of `y` per unit of `t`; check it against finite differences of `y`. |
+| `cubic_hermite` gives wild values outside the data | Extrapolation with the end cubic | Clamp `x` to the data range. |

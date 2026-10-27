@@ -12,3 +12,5 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `cholesky` 0.1.0 (experimental, `linalg`): Cholesky factorization and triangular solves.
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
 - `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.
+- `hermite_extremum` 0.1.0 (experimental, new area `interpolate`): global maximum or minimum of the piecewise cubic Hermite interpolant through `(t, y, dy/dt)`, with location, value and interval index; generic over `Real`.
+- `cubic_hermite` 0.1.0 (experimental, `interpolate`): piecewise cubic Hermite evaluator.
