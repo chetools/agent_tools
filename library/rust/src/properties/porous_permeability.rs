@@ -98,6 +98,7 @@ pub fn gebart_hexagonal(eps: f64, d: f64) -> f64 {
 /// Sangani & Acrivos (1982) dilute expansion (m^2), transverse flow through a square array of cylinders
 /// of diameter `d` (m): `a^2/(8 phi) (-ln phi - 1.476 + 2 phi - 1.774 phi^2 + 4.076 phi^3)`, a = d/2,
 /// phi = 1 - eps. Domain: 0 < eps < 1, d > 0, phi <= pi/4; outside: NaN. Recommended: small phi.
+/// Do not use near close packing: at phi = 0.78 it gives about 0.048 d^2 where Gebart gives about 7e-8 d^2.
 pub fn sangani_acrivos_square(eps: f64, d: f64) -> f64 {
     let phi = 1.0 - eps;
     if !(eps > 0.0 && eps < 1.0 && d > 0.0 && phi <= PHI_MAX_SQUARE) {

@@ -4,7 +4,7 @@ Python reference implementation (NumPy only); Rust twin:
 library/rust/src/properties/porous_permeability.rs.  Ported from chetools/claude
 `porous-media-lbm/python/lbm.py`.
 
-Units (SI) -- eps dimensionless; d, a_s^-1, R in m; k in m^2; U, in m/s; mu in Pa s; rho in kg/m^3;
+Units (SI) -- eps dimensionless; d, a_s^-1, R in m; k in m^2; U in m/s; mu in Pa s; rho in kg/m^3;
 pressure gradient in Pa/m; a_s in 1/m; K, A, B dimensionless.  Functions broadcast over NumPy
 arrays and return NumPy floats/arrays.
 
@@ -119,7 +119,8 @@ def sangani_acrivos_square(eps, d):
     a = d/2, phi = 1 - eps.
 
     Domain: 0 < eps < 1, d > 0, phi <= pi/4 (beyond the square close packing the cylinders overlap);
-    outside it: NaN.  Recommended: dilute, small phi (truncated at O(phi^4); accuracy at large phi not verified)."""
+    outside it: NaN.  Recommended: dilute, small phi (truncated at O(phi^4); accuracy at large phi not verified).
+    Do not use near close packing: at phi = 0.78 it gives about 0.048 d^2 where Gebart gives about 7e-8 d^2."""
     eps, d = np.broadcast_arrays(np.asarray(eps, dtype=float), np.asarray(d, dtype=float))
     phi, a = 1.0 - eps, 0.5 * d
     ok = (eps > 0) & (eps < 1) & (d > 0) & (phi <= PHI_MAX_SQUARE)
