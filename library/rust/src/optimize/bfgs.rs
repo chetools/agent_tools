@@ -16,7 +16,14 @@
 //! 1. Stop with success if `max|g| < gtol` (strict).
 //! 2. Direction `p = -H g`; if `g.p >= 0` (not a descent direction), reset `H = I` and use `p = -g`.
 //! 3. Backtrack `a = 1, 1/2, 1/4, ...` until `f(x + a p) <= f(x) + C1 a g.p`; fail if `a < MIN_STEP`.
-//! 4. Update `H` unless the curvature `s.y <= SY_MIN`; accept the step.
+//! 4. Stop with failure ("no progress") if the step left `x` unchanged (`x + a p == x` in every
+//!    component): this happens when `gtol` is below what rounding allows. The point before the
+//!    step is returned and the step is not counted. (A rule on `f` not decreasing was tried and
+//!    rejected: near convergence `f` stops changing in floating point well before `max|g|`
+//!    reaches a tolerance like 1e-10, and the run still converges.)
+//!    Also stop with "no progress" if `max|g|` reaches no new lowest value in `STALL_ITERS` = 20 consecutive
+//!    accepted steps (rounding-level wandering of `x` by a few ulps, which the first test misses).
+//! 5. Update `H` unless the curvature `s.y <= SY_MIN`; accept the step.
 //!
 //! The inverse Hessian starts as the identity (no scaling), so the first step is a steepest-descent
 //! step of length `|g|` and the line search may need several halvings when the objective is badly
@@ -25,6 +32,15 @@
 
 /// Sufficient-decrease constant `c1` of the Armijo condition (dimensionless).
 pub const C1: f64 = 1e-4;
+/// Relative tolerance on `f` of the approximate-Wolfe acceptance (dimensionless): a trial point may have
+/// `f1 <= f + APPROX_EPS |f|` when the slope condition below holds (Hager & Zhang 2005 use 1e-6).
+pub const APPROX_EPS: f64 = 1e-6;
+/// Slope factor of the approximate-Wolfe acceptance (dimensionless): the slope `g1.p` at the trial point
+/// must satisfy `g1.p >= SIGMA g.p` (Hager & Zhang 2005 use 0.9).
+pub const SIGMA: f64 = 0.9;
+/// Stall limit (iterations): the run stops with "no progress" when `max|g|` has not reached a new lowest
+/// value in this many consecutive accepted steps (rounding-level wandering; `gtol` below attainable accuracy).
+pub const STALL_ITERS: usize = 20;
 /// Smallest accepted line-search step length (dimensionless, relative to the direction `p`).
 pub const MIN_STEP: f64 = 1e-10;
 /// The inverse-Hessian update is skipped when `s.y <= SY_MIN`. Absolute threshold, in
@@ -34,7 +50,7 @@ pub const SY_MIN: f64 = 1e-12;
 /// Options of [`bfgs`].
 #[derive(Clone, Debug)]
 pub struct BfgsOptions {
-    /// Maximum number of accepted steps (iterations). Default 200.
+    /// Maximum number of accepted steps (iterations). Default 200. Must be at least 1.
     pub max_iter: usize,
     /// Gradient tolerance: stop when the max-norm of the gradient is below this value, in the
     /// units of the gradient (units of `f` per unit of `x`). Default 1e-5. Must be positive.
@@ -59,8 +75,8 @@ pub struct BfgsResult {
     pub grad_norm: f64,
     /// True if `grad_norm < gtol` was reached.
     pub success: bool,
-    /// Status text: `"converged: ..."`, or the reason for failure (iteration limit, line-search
-    /// failure, non-finite objective or gradient).
+    /// Status text: `"converged: ..."`, or the reason for failure (invalid option, iteration limit,
+    /// line-search failure, no progress, non-finite objective or gradient).
     pub message: String,
     /// Number of accepted steps.
     pub nit: usize,
@@ -89,10 +105,21 @@ fn max_norm(g: &[f64]) -> f64 {
 /// * `x0` is the starting point (units of `x`); `x0.len()` is `n >= 1`.
 /// * `options`: see [`BfgsOptions`].
 ///
-/// Failure modes (`success = false`, best point so far returned): non-finite `f` or gradient at
-/// `x0` or at an accepted point; line search shrinks the step below [`MIN_STEP`] (typical for a
-/// wrong gradient sign or a discontinuous objective); `max_iter` steps without convergence.
+/// Failure modes (`success = false`, best point so far returned): `gtol` not finite or not positive,
+/// or `max_iter < 1` (checked first: `fg` is never called, `nfev = 0`, `x = x0`, `f` and `grad_norm`
+/// NaN); non-finite `f` or gradient at `x0` or at an accepted point; line search shrinks the step
+/// below [`MIN_STEP`] (typical for a wrong gradient sign or a discontinuous objective); a step that
+/// leaves `x` unchanged ("no progress": `gtol` is below the accuracy that
+/// rounding allows; raise it); `max_iter` steps without convergence.
 pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options: &BfgsOptions) -> BfgsResult {
+    if !(options.gtol.is_finite() && options.gtol > 0.0) {
+        let msg = format!("invalid option: gtol = {:e} must be finite and > 0", options.gtol);
+        return BfgsResult { x: x0.to_vec(), f: f64::NAN, grad_norm: f64::NAN, success: false, message: msg, nit: 0, nfev: 0 };
+    }
+    if options.max_iter < 1 {
+        let msg = "invalid option: max_iter must be >= 1".to_string();
+        return BfgsResult { x: x0.to_vec(), f: f64::NAN, grad_norm: f64::NAN, success: false, message: msg, nit: 0, nfev: 0 };
+    }
     let p = x0.len();
     let mut z = x0.to_vec();
     let mut g = vec![0.0; p];
@@ -120,6 +147,8 @@ pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options:
     };
     let mut h = vec![0.0; p * p];
     eye(&mut h);
+    let mut best_gn = gn;
+    let mut since_best = 0usize;
     let mut z1 = vec![0.0; p];
     let mut g1 = vec![0.0; p];
     loop {
@@ -154,11 +183,25 @@ pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options:
             if f1 <= f + C1 * a * gp {
                 break f1;
             }
+            // Approximate Wolfe acceptance (Hager & Zhang 2005, eq. 4.1), for the noise regime: `f` is flat to
+            // rounding near the minimum, so the Armijo test can reject every step although the gradient shrinks.
+            // Accept if f1 <= f + APPROX_EPS |f| and the slope along p is between SIGMA g.p (negative) and
+            // (2 C1 - 1) g.p (about -g.p), i.e. the slope did not grow in size, and max|g| decreased (so the noise
+            // regime cannot wander: every such step lowers max|g|).
+            if f1 <= f + APPROX_EPS * f.abs() && f1.is_finite() && max_norm(&g1) < gn {
+                let dg: f64 = (0..p).map(|i| g1[i] * dir[i]).sum();
+                if dg >= SIGMA * gp && dg <= (2.0 * C1 - 1.0) * gp {
+                    break f1;
+                }
+            }
             a *= 0.5;
             if a < MIN_STEP {
                 return fail(z, f, gn, format!("line search failed: step below {MIN_STEP:e}"), nit, nfev);
             }
         };
+        if z1 == z {
+            return fail(z, f, gn, "no progress: step left x unchanged (gtol below attainable accuracy?)".to_string(), nit, nfev);
+        }
         let s: Vec<f64> = (0..p).map(|i| z1[i] - z[i]).collect();
         let yv: Vec<f64> = (0..p).map(|i| g1[i] - g[i]).collect();
         let sy: f64 = (0..p).map(|i| s[i] * yv[i]).sum();
@@ -191,6 +234,16 @@ pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options:
         nit += 1;
         if !gn.is_finite() {
             return fail(z, f, gn, "non-finite gradient at an accepted point".to_string(), nit, nfev);
+        }
+        if gn < best_gn {
+            best_gn = gn;
+            since_best = 0;
+        } else {
+            since_best += 1;
+            if since_best >= STALL_ITERS {
+                let msg = format!("no progress: max|grad| not below {best_gn:e} in {STALL_ITERS} steps (gtol below attainable accuracy?)");
+                return fail(z, f, gn, msg, nit, nfev);
+            }
         }
     }
 }

@@ -73,9 +73,11 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 |---|---|---|
 | `success = false`, "line search failed" | Wrong gradient (sign or scale), discontinuous or noisy objective, or `f` at the limit of rounding near the minimum | Check the gradient against central differences on both sides of the point; loosen `gtol` if `f` is already flat to rounding. |
 | `success = false`, "max_iter reached" | Badly scaled variables, a narrow curved valley, or too small a limit | Rescale variables to O(1); raise `max_iter`; the identity start makes the first steps short or long by the gradient size. |
-| Many more evaluations than `scipy.optimize.minimize(method='BFGS')` | Halving-only Armijo line search, no Wolfe curvature condition or interpolation | Expected (about 1 to 3 times SciPy's count in the catalog tests); use SciPy where evaluations are expensive. |
+| Many more evaluations than `scipy.optimize.minimize(method='BFGS')` | Halving-only Armijo line search, no Wolfe curvature condition or interpolation | Expected (1.3 to 2.4 times SciPy's count on the four original catalog cases, 2.9 times (50 vs 17) on the 8-D quadratic with eigenvalues 1 to 1e3, and 5 times, 80 vs 16, measured by a reviewer on another such quadratic); use SciPy where evaluations are expensive. |
 | Inverse-Hessian update silently skipped | Curvature `s.y <= 1e-12` (absolute threshold) | Rescale `x` and `f` so curvature is O(1). |
 | Result violates a bound | `bfgs` is unconstrained | Optimize transformed unbounded variables, scaling the gradient by the chain rule. |
+| `success = false`, "no progress" | `gtol` is below what rounding allows at this `x` and `f` (`f` flat to rounding, gradient at rounding level): a step left `x` unchanged, or `max|g|` reached no new low in 20 steps | The returned `x` is the last accepted point (at rounding level); raise `gtol` (`grad_norm` shows what was attainable) or rescale `x` and `f`. |
+| `success = false`, "invalid option" and `nfev = 0` | `gtol` not finite or not > 0, or `max_iter` < 1 | Pass a positive finite `gtol` and `max_iter >= 1`. |
 
 ## Gaussian processes and design (`gp_matern52`, `imse_batch`)
 
