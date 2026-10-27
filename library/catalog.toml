@@ -144,3 +144,23 @@ verified_rtol = [0, 0]
 tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
 source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
+
+[[routine]]
+id = "rosenbrock23"
+name = "Adaptive Rosenbrock 2(3) stiff integrator (ode23s), generic over Real"
+area = "ode"
+problem_class = "stiff_ivp"
+suitable_for = ["small_stiff_systems","cheap_dense_jacobian","parametric_sensitivities_by_ad","moderate_accuracy_rtol_1e-3_to_1e-6"]
+equivalent = "MATLAB ode23s (no SciPy solve_ivp equivalent; closest stiff solvers are Radau and BDF)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/ode/rosenbrock23.rs"
+python = "library/python/agent_tools/ode/rosenbrock23.py"
+example = "library/examples/rust/rosenbrock23.rs"
+example_python = "library/examples/python/rosenbrock23.py"
+features = ["dense_jacobian_callback","optional_dfdt_or_fd_dfdt","per_component_atol","dual_number_derivatives_in_step_control","stores_t_y_dydt_for_hermite_dense_output","step_counts"]
+units = "t and y in the caller's units; rtol dimensionless; atol in units of y"
+verified_rtol = [1e-3, 1e-7]
+tests = ["decay_vs_exact","nonautonomous_vs_exact","robertson_vs_radau_1e5","van_der_pol_mu1000_vs_radau","tolerance_study_vs_radau_bdf","ad_vs_fd_exact_and_forward_sensitivity","failures_reported","python_vs_rust"]
+source = "Shampine & Reichelt, The MATLAB ODE Suite, SIAM J. Sci. Comput. 18(1), 1997; ported from chetools/claude packed-bed-runaway (integrate)"
+notes = "Second order: at the same rtol it takes many more steps than Radau (Robertson to 1e5 at rtol 1e-7: 9105 steps vs 372; Van der Pol mu=1000 to 3000 at 1e-7: 31183 vs 2290), so use it for rtol >= 1e-6 or when Dual sensitivities through the steps are wanted. Achieved error is 2 to 150 times rtol on the tested cases (local error control). Step control also tests the derivative parts of Dual states. No df/dt: autonomous (zero) by default; dfdt closure or fd_dfdt option for time-dependent f. Differences from the source: dense caller-supplied Jacobian, df/dt support, per-component atol, h0 default 1e-4*span, no hmax cap by default (source 0.05), Jacobian reused after a rejected step."

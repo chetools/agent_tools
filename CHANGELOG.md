@@ -12,3 +12,4 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `cholesky` 0.1.0 (experimental, `linalg`): Cholesky factorization and triangular solves.
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
 - `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.
+- `rosenbrock23` 0.1.0 (experimental, `ode`): adaptive Rosenbrock 2(3) (ode23s) stiff integrator generic over `Real`, with optional `df/dt`, per-component `atol`, dual-aware step control, and stored `t, y, dy/dt`.

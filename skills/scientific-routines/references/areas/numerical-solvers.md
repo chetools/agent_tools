@@ -19,6 +19,12 @@ Signs of stiffness: an explicit method takes very many tiny steps while the solu
 
 Event detection (zero crossings) and dense output are features of the integrator interface. Record in the catalog which routines support them.
 
+### Implemented ODE routines
+
+| Situation | Routine | SciPy equivalent | Notes |
+|---|---|---|---|
+| Stiff IVP, small n, dense Jacobian available, rtol about 1e-3 to 1e-6; or derivatives of the result with respect to parameters through the adaptive steps (`Dual` state) | `rosenbrock23` (ode23s, 2nd order, Shampine and Reichelt 1997) | none in `solve_ivp`; compare `Radau`, `BDF` | One LU of `I - h d J` per attempted step, no Newton iteration. Measured (see catalog): at the same rtol it needs many more steps than Radau or BDF (Robertson to 1e5, rtol 1e-7: 9105 steps vs 372 and 536), so prefer Radau for tight tolerances when no AD is needed. Achieved error is 2 to 150 times rtol. Needs `df/dt` (`dfdt` closure or `fd_dfdt`) for time-dependent `f`. Stores t, y and dy/dt at accepted steps for Hermite dense output. No event detection. |
+
 ## Scalar roots (SciPy `brentq`, `root_scalar`)
 
 | Situation | Method | Notes |
