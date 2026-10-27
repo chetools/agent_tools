@@ -78,6 +78,7 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Peak value changes noticeably when samples are added | Knots too coarse for the feature | Halve the spacing; the peak-value error should drop by about 16. |
 | Slopes inconsistent with values (visible kinks or overshoot) | `dy` is not the derivative of `y` (wrong units, or per step instead of per unit of `t`) | `dy` is `dy/dt` in unit of `y` per unit of `t`; check it against finite differences of `y`. |
 | `cubic_hermite` gives wild values outside the data | Extrapolation with the end cubic | Clamp `x` to the data range. |
+
 ## ODE integrators (`rosenbrock23`)
 
 | Symptom | Likely cause | Fix |
