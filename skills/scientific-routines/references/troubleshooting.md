@@ -58,3 +58,11 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | `lu_dense` succeeds but the solution is huge or the residual is large | Nearly singular matrix (not detected) | Compute the residual `A x - b`; estimate the condition number; expect a relative error up to about `eps * cond`. |
 | `cholesky` fails with "not positive definite" | Matrix is not SPD, or only semidefinite, or too ill-conditioned in f64 | Check symmetry and eigenvalues; add a small diagonal jitter (for Gaussian-process covariances, a nugget) deliberately. |
 | `cholesky` result differs from NumPy at the 1e-10 level | Ill-conditioned matrix (for example Hilbert n = 10): errors scale with `eps * cond` | Expected; compare the residual `L L^T - A` instead. |
+
+## Random numbers (`splitmix64`, `mulberry32`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
+| Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
+| Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |

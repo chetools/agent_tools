@@ -104,3 +104,23 @@ verified_rtol = [1e-16, 1e-12]
 tests = ["random_spd_n1_to_50","hilbert_cond_5e5_to_1.6e13","not_spd","triangular_multi_rhs","python_vs_rust"]
 source = "Golub & Van Loan, Matrix Computations, 4th ed., Alg. 4.2.1; ported from chetools/claude sequential-design (own code)"
 notes = "Only the lower triangle is read; symmetry is not checked. Failure (success=false) on a non-positive or NaN pivot, which includes semidefinite matrices. f64 only."
+
+[[routine]]
+id = "splitmix64"
+name = "SplitMix64 generator with uniform, normal and shuffle"
+area = "random"
+problem_class = "seeded_prng"
+suitable_for = ["bit_identical_across_languages","monte_carlo","shuffling"]
+equivalent = "none (numpy generators are not reproducible in Rust)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/random/splitmix64.rs"
+python = "library/python/agent_tools/random/splitmix64.py"
+example = "library/examples/rust/splitmix64.rs"
+example_python = "library/examples/python/splitmix64.py"
+features = ["uniform_53bit","normal_box_muller","fisher_yates_permutation","seed_stream_constructor"]
+units = "dimensionless"
+verified_rtol = [0, 1e-14]
+tests = ["streams_bit_identical_vs_published_algorithm","node_bigint_cross_check","statistics_1e5","python_vs_rust"]
+source = "Steele, Lea & Flood, OOPSLA 2014; Vigna splitmix64.c (public domain); ported from chetools/claude sequential-design"
+notes = "u64 outputs and uniform() are bit-identical in Rust and Python; normal() agrees to libm rounding (0 difference observed in the tests). Not cryptographically secure. new(state) is the published algorithm; from_seed_stream(seed, stream) uses state = seed*1000003 + stream."
