@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>particle_advect_rk2 example</title>
+<pre id="out">running...</pre>
+<script type="module">
+// Solid-body rotation about the box centre sampled on a 32^3 grid, 5 particles advected a quarter turn.
+// Units: lengths in metres (h = 1/32 m), velocity in m/s.
+import { getDevice } from "../../js/gpu_util.js";
+import { createParticleAdvector, substepCount } from "../../js/particle_advect_rk2.js";
+const out = document.getElementById("out");
+try {
+  const n = 32, h = 1 / n, Om = 2;                              // Om: angular speed, rad/s
+  const V = new Float32Array(3 * n * n * n);
+  for (let k = 0; k < n; k++) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const x = (i + 0.5) * h, y = (j + 0.5) * h, m = (k * n + j) * n + i;   // cell centres (i+1/2) h
+    V[m] = -Om * (y - 0.5); V[n ** 3 + m] = Om * (x - 0.5);                 // u, v; w stays 0
+  }
+  const { device } = await getDevice();
+  const adv = await createParticleAdvector(device, { nx: n, ny: n, nz: n, h, periodic: true, maxParticles: 5 });
+  adv.setVelocity(V);
+  const r0 = [0.1, 0.15, 0.2, 0.25, 0.3];
+  adv.setPositions(Float32Array.from(r0.flatMap(r => [0.5 + r, 0.5, 0.5])));
+  const T = Math.PI / (2 * Om);                                  // quarter turn, s
+  const nsub = await adv.advect({ dt: T, umax: Om * 0.3, maxFrac: 0.5, wantSpeed: true });
+  const res = await adv.read();
+  let s = `quarter turn T = ${T.toFixed(4)} s in ${nsub} RK2 substeps (substepCount = ${substepCount(T, Om * 0.3, h, 0.5)})\n`;
+  s += "r0 [m]   x [m]     y [m]     exact (x, y)   |u| [m/s]  exact   flags\n";
+  r0.forEach((r, p) => {
+    s += `${r.toFixed(2)}   ${res.xyz[3 * p].toFixed(5)}  ${res.xyz[3 * p + 1].toFixed(5)}   (0.50000, ${(0.5 + r).toFixed(5)})   ` +
+         `${res.speed[p].toFixed(5)}  ${(Om * r).toFixed(5)}  ${res.flags[p]}\n`;
+  });
+  out.textContent = s; adv.destroy();
+} catch (e) { out.textContent = "ERROR " + (e.stack || e); }
+</script>

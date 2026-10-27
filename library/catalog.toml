@@ -88,3 +88,25 @@ verified_rtol = [1e-6, 1e-5]
 tests = ["tests/gpu/marching_cubes.test.js", "tests/python/test_marching_cubes.py"]
 source = "chetools/claude cylinder-cavity-3d/web/iso.wgsl (cs_mc, cs_args, grad, fa, fb, wrapk) and web/render.js; case table: Lorensen & Cline, SIGGRAPH 1987, 163-169, in the numbering of P. Bourke, 'Polygonising a scalar field'"
 notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle (it reads the case table from the WGSL file). Triangle order is nondeterministic, so tests compare order-independent quantities. Tolerances: area/volume 1e-6 relative, colour 1e-6, normals 1e-5, vertex Hausdorff 1e-5 h, triangle count exact. Ambiguous cells resolve differently from skimage's default Lewiner method. The case table's licence is not stated in the source; settle it before verification."
+
+[[routine]]
+id = "particle_advect_rk2"
+name = "Massless particle advection, RK2 midpoint, trilinear cell-centred velocity (WebGPU)"
+area = "gpu"
+problem_class = "particle_advection"
+suitable_for = ["tracers", "streaklines", "gridded_velocity_field", "no_slip_walls", "periodic_z", "many_particles"]
+equivalent = "scipy.integrate.solve_ivp (fixed-step midpoint) with scipy.interpolate.RegularGridInterpolator(method='linear') as the velocity"
+status = "experimental"
+version = "0.1.0"
+rust = ""
+python = "library/python/gpu/particle_advect_rk2.py"
+wgsl = "library/wgsl/particle_advect_rk2.wgsl"
+js = "library/js/particle_advect_rk2.js"
+example = "library/examples/gpu/particle_advect_rk2.html"
+features = ["periodic_z_or_walled_z", "odd_mirror_no_slip_walls", "clamp_with_flags", "wrap_flag", "substep_count_from_umax", "speed_output", "sampling_only_nsub0", "anisotropic_grid_nx_ny_nz"]
+units = "lengths (h, positions): any consistent unit, metres in SI; velocity: length/time; dt: time. Velocity layout [c][k][j][i], c = u,v,w along x,y,z. Cell centres at (i+1/2)h."
+valid_range = "nx, ny, nz >= 1 (not only powers of two), h > 0; up to 64*maxComputeWorkgroupsPerDimension particles (tested 1e5); grids tested up to 24^3 on the GPU"
+verified_rtol = [1e-5, 5e-3]
+tests = ["tests/gpu/particle_advect_rk2.test.js", "tests/python/test_particle_advect_rk2.py"]
+source = "chetools/claude cylinder-cavity-3d web/trails.wgsl (cs_advect, vel, vg) and web/tracers.js (velAt, rk2); trail storage, drawing, re-seeding, lifetimes, substep schedule and body hiding removed"
+notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle. Out-of-domain particles are clamped to the wall and flagged (bits 1, 2, 4 = x, y, z clamp; 8 = z wrapped), never re-seeded; a clamped particle stays on the wall because the velocity is 0 there. Tolerances: positions 2e-4..5e-3 h depending on substep count (f32 round-off grows along converging paths), |u| 5e-6..2e-3 of the top speed, flags exact. Keep umax*dt/nsub <= 0.5 h (substepCount). nsub = 0 only samples |u|."
