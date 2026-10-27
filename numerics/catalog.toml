@@ -12,7 +12,7 @@
 #                   "unconstrained", "bounded", "constrained", "least_squares"
 #   suitable_for    tags such as "stiff", "nonstiff", "dae_index1", "bracketed", "derivative_free"
 #   scipy_equivalent  closest SciPy call, for orientation
-#   status          "experimental" (agent-added, unreviewed) | "verified" (set only by a maintainer merge)
+#   status          "experimental" (agent-added, unreviewed) | "verified" (set only on a maintainer's explicit approval; see AGENTS.md section 5)
 #   version         semantic version of the routine
 #   rust            path to Rust source
 #   python          path to Python reference twin

@@ -18,7 +18,7 @@ This skill points to a shared library of numerical routines. Each routine exists
 ## Non-negotiables
 
 - Do not rewrite a routine that is in the catalog with `status = "verified"`.
-- Never set `status = "verified"` yourself. New routines start as `experimental`; a human merge makes them verified.
+- Never set `status = "verified"` yourself. New routines start as `experimental`; only a maintainer's explicit approval of that pull request makes them verified. You may merge on that explicit instruction, after posting the comment required by `AGENTS.md` section 5.
 - Change routines here through a pull request, never by patching a downstream copy.
 - Report numbers (errors against reference, evaluation counts), not impressions. Label anything unchecked as an expectation.
 

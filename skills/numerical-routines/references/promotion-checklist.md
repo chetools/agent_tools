@@ -38,4 +38,5 @@ Follow this checklist when adding a routine to the library. Every item is requir
 
 - [ ] Branch name `routine/<routine-name>`. No direct push to `main`.
 - [ ] Description includes the verification numbers, not only "tests pass".
-- [ ] A maintainer merge (not the agent) moves the status to `verified`.
+- [ ] A review report with verification numbers is posted on the pull request.
+- [ ] The status moves to `verified` only on a maintainer's explicit approval of this pull request. If an agent performs the merge, it first comments "Merged on instruction from <maintainer>, <date>." (see `AGENTS.md` section 5).
