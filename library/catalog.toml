@@ -64,3 +64,23 @@ verified_rtol = [1e-12, 1e-6]
 tests = ["analytic_derivatives","central_fd","nested_second_derivative","python_vs_rust"]
 source = "Griewank & Walther, Evaluating Derivatives, 2nd ed. (SIAM 2008) ch. 3; ported from chetools/claude packed-bed-runaway (own code, no third-party license)"
 notes = "Write model code once generic over Real (Rust) or with the module functions (Python); f64 and Dual give value and derivative. Dual<Dual<f64>> gives second derivatives. abs has derivative +d at exactly 0; powi(0) is constant 1; sqrt has infinite derivative at 0. Tolerances: 1e-12 vs analytic, 1e-6 vs central differences."
+
+[[routine]]
+id = "lu_dense"
+name = "Dense LU with partial pivoting, factor and solve"
+area = "linalg"
+problem_class = "dense_linear_solve"
+suitable_for = ["small_dense_systems","generic_over_real","dual_numbers"]
+equivalent = "scipy.linalg.lu_factor / lu_solve; numpy.linalg.solve"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/linalg/lu_dense.rs"
+python = "library/python/agent_tools/linalg/lu_dense.py"
+example = "library/examples/rust/lu_dense.rs"
+example_python = "library/examples/python/lu_dense.py"
+features = ["singularity_report","dual_entries","lapack_pivot_convention"]
+units = "dimensionless (x has units of b / A)"
+verified_rtol = [1e-14, 1e-12]
+tests = ["random_well_conditioned_n1_to_50","ill_conditioned_1e4_1e8_1e12","singular","dual_solution_derivative","python_vs_rust"]
+source = "Golub & Van Loan, Matrix Computations, 4th ed., Alg. 3.4.1 (written from the book; no code ported)"
+notes = "Row-major flat matrices. Singularity = exactly zero or non-finite pivot only; nearly singular matrices are not detected, check the residual. Ill-conditioned tests use error <= 10 eps cond against SciPy. Pivot is chosen on .val(), so a Dual solution is the derivative for that pivot sequence."
