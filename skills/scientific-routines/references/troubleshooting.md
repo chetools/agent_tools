@@ -66,3 +66,13 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
+
+## Optimization (`bfgs`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `success = false`, "line search failed" | Wrong gradient (sign or scale), discontinuous or noisy objective, or `f` at the limit of rounding near the minimum | Check the gradient against central differences on both sides of the point; loosen `gtol` if `f` is already flat to rounding. |
+| `success = false`, "max_iter reached" | Badly scaled variables, a narrow curved valley, or too small a limit | Rescale variables to O(1); raise `max_iter`; the identity start makes the first steps short or long by the gradient size. |
+| Many more evaluations than `scipy.optimize.minimize(method='BFGS')` | Halving-only Armijo line search, no Wolfe curvature condition or interpolation | Expected (about 1 to 3 times SciPy's count in the catalog tests); use SciPy where evaluations are expensive. |
+| Inverse-Hessian update silently skipped | Curvature `s.y <= 1e-12` (absolute threshold) | Rescale `x` and `f` so curvature is O(1). |
+| Result violates a bound | `bfgs` is unconstrained | Optimize transformed unbounded variables, scaling the gradient by the chain rule. |

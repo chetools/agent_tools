@@ -144,3 +144,24 @@ verified_rtol = [0, 0]
 tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
 source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
+
+[[routine]]
+id = "bfgs"
+name = "BFGS minimization with Armijo backtracking"
+area = "optimize"
+problem_class = "unconstrained_minimization"
+suitable_for = ["smooth","gradient_available","small_to_moderate_n","gp_hyperparameters"]
+equivalent = "scipy.optimize.minimize(method='BFGS')"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/optimize/bfgs.rs"
+python = "library/python/agent_tools/optimize/bfgs.py"
+example = "library/examples/rust/bfgs.rs"
+example_python = "library/examples/python/bfgs.py"
+features = ["fg_callback_value_and_gradient","non_finite_trial_points_rejected","result_with_nit_nfev"]
+units = "x, f arbitrary; gtol in units of f per unit of x (max-norm of the gradient)"
+valid_range = "n up to tens (dense O(n^2) inverse Hessian); tested n = 2, 5, 10"
+verified_rtol = [1e-12, 1e-8]
+tests = ["quadratic_n5_exact","rosenbrock_2d","extended_rosenbrock_n10","scaled_valley_a1000","vs_scipy_bfgs_gtol_1e-10","failure_modes","python_vs_rust_iterates"]
+source = "Nocedal & Wright, Numerical Optimization, 2nd ed., Alg. 6.1, eq. 6.17, Alg. 3.1; ported from chetools/claude sequential-design (own code)"
+notes = "Unconstrained only (the source's bounds were a problem-specific tanh transform, not ported). Defaults: gtol = 1e-5 (max-norm, strict), max_iter = 200, Armijo c1 = 1e-4, halving until step < 1e-10, update skipped if s.y <= 1e-12 (absolute). Identity initial inverse Hessian. fg may return inf/NaN to reject a trial point. Uses 1 to 3 times SciPy's evaluations (no Wolfe line search). Python and Rust give identical iterates (loops in the same order)."
