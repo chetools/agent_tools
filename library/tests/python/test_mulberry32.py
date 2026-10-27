@@ -20,7 +20,7 @@ def test_streams_are_bit_identical():
     g = Mulberry32(1)
     assert [g.next_u32() for _ in range(4)] == [2693262067, 11749833, 2265367787, 4213581821]
     assert Mulberry32(2**32 + 5).a == 5   # seed masked to 32 bits
-    print(f"VERIFY mulberry32 py_streams mismatches_vs_node=0 values_checked={n}")
+    print(f"VERIFY mulberry32 py_streams mismatches_vs_stored_node_values=0 values_checked={n}")
 
 
 def test_statistics():
