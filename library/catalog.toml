@@ -66,3 +66,25 @@ verified_rtol = [2e-5, 1e-3]
 tests = ["tests/python/test_multigrid_poisson_cc.py", "tests/gpu/multigrid_poisson_cc.test.js"]
 source = "chetools/claude cylinder-cavity-3d: web/fv.wgsl (multigrid section), web/fv_gpu.js (levels, V-cycle order), python/fv3d.py (neighbour_sum ... solve_pressure); generalised with own uniform struct, z boundary option, mean-removal kernels. Standard geometric multigrid, e.g. Briggs, Henson & McCormick, A Multigrid Tutorial (2nd ed.)."
 notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle. Red-black colouring by parity of i+j in every layer, Jacobi in z, so z-independent problems stay z-independent for periodic z; with zero-flux z walls they only converge to z-independence. The singular problem needs mean(b) = 0 (mean removal on by default). f32 residual floor is about 1e-6 of |b|, so rtol below about 1e-5 may never be met on the GPU. Measured convergence factor about 0.14 per V-cycle in 3D, 0.065 at NZ = 1. Tolerances: 2e-5 on the solution (relative to max |x|), 1e-3 on the residual history."
+
+[[routine]]
+id = "marching_cubes"
+name = "Marching cubes isosurface extraction (WebGPU compute)"
+area = "gpu"
+problem_class = "isosurface_extraction"
+suitable_for = ["scalar_field_3d", "regular_grid", "triangle_mesh", "indirect_draw", "noncubic_grid", "periodic_z_optional"]
+equivalent = "skimage.measure.marching_cubes"
+status = "experimental"
+version = "0.1.0"
+rust = ""
+python = "library/python/gpu/marching_cubes.py"
+wgsl = "library/wgsl/marching_cubes.wgsl"
+js = "library/js/marching_cubes.js"
+example = "library/examples/gpu/marching_cubes.html"
+features = ["per_vertex_gradient_normals", "optional_colour_field", "atomic_append_with_capacity_and_overflow_flag", "indirect_draw_args", "noncubic_grid", "periodic_z_optional", "origin_offset"]
+units = "h and origin in any consistent length unit (positions use it); iso and field in field units; normals dimensionless; colour field keeps its own units"
+valid_range = "nx, ny, nz >= 2; equal spacing h in x, y, z; cells < 2^31; 3*maxTris*32 bytes within the device storage-buffer limit; classic table with a fixed ambiguity choice (no asymptotic decider). GPU tested up to about 28k nodes."
+verified_rtol = [1e-6, 1e-5]
+tests = ["tests/gpu/marching_cubes.test.js", "tests/python/test_marching_cubes.py"]
+source = "chetools/claude cylinder-cavity-3d/web/iso.wgsl (cs_mc, cs_args, grad, fa, fb, wrapk) and web/render.js; case table: Lorensen & Cline, SIGGRAPH 1987, 163-169, in the numbering of P. Bourke, 'Polygonising a scalar field'"
+notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle (it reads the case table from the WGSL file). Triangle order is nondeterministic, so tests compare order-independent quantities. Tolerances: area/volume 1e-6 relative, colour 1e-6, normals 1e-5, vertex Hausdorff 1e-5 h, triangle count exact. Ambiguous cells resolve differently from skimage's default Lewiner method. The case table's licence is not stated in the source; settle it before verification."

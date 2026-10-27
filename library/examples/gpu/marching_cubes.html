@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>marching_cubes example</title>
+<h1>marching_cubes: sphere on a 32 x 28 x 24 grid</h1>
+<p>Extracts the isosurface r = 0.8 of f = sqrt(x^2 + y^2 + z^2) (h = 0.1) and compares with the exact sphere.</p>
+<pre id="out">running...</pre>
+<script type="module">
+import { getDevice } from "../../js/gpu_util.js";
+import { createMarchingCubes, meshArea, meshVolume } from "../../js/marching_cubes.js";
+const out = document.getElementById("out");
+try {
+  const { device } = await getDevice();
+  const nx = 32, ny = 28, nz = 24, h = 0.1, origin = [-1.55, -1.35, -1.15], r = 0.8;
+  const f = new Float32Array(nx * ny * nz);
+  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++)
+    f[(k * ny + j) * nx + i] = Math.hypot(origin[0] + i * h, origin[1] + j * h, origin[2] + k * h);
+  const mc = await createMarchingCubes(device, { nx, ny, nz, h, origin, iso: r });
+  mc.setField(f);
+  await mc.run();
+  const mesh = await mc.read();
+  const A = meshArea(mesh.vertices), V = meshVolume(mesh.vertices);
+  window.RESULT = { triangles: mesh.triangles, overflow: mesh.overflow, area: A, volume: V };
+  out.textContent =
+    `triangles           ${mesh.triangles}  (overflow: ${mesh.overflow})\n` +
+    `area                ${A.toFixed(4)}   exact 4 pi r^2 = ${(4 * Math.PI * r * r).toFixed(4)}\n` +
+    `enclosed volume     ${V.toFixed(4)}   exact 4/3 pi r^3 = ${(4 / 3 * Math.PI * r ** 3).toFixed(4)}\n` +
+    `first vertex        pos ${Array.from(mesh.vertices.slice(0, 3)).map(v => v.toFixed(3))}  normal ${Array.from(mesh.vertices.slice(4, 7)).map(v => v.toFixed(3))}`;
+} catch (e) { out.textContent = "error: " + e.message; window.RESULT = { error: String(e) }; console.error(e); }
+</script>
