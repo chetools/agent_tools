@@ -29,7 +29,7 @@ fn streams_are_bit_identical() {
     let mut g = Mulberry32::new(1);
     let v: Vec<u32> = (0..4).map(|_| g.next_u32()).collect();
     assert_eq!(v, vec![2693262067, 11749833, 2265367787, 4213581821]);
-    println!("VERIFY mulberry32 streams mismatches_vs_node=0 values_checked={n}");
+    println!("VERIFY mulberry32 streams mismatches_vs_stored_node_values=0 values_checked={n}");
 }
 
 #[test]

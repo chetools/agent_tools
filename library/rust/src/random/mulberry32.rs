@@ -36,6 +36,7 @@ impl Mulberry32 {
     /// Integer in `0..n` as `next_u32 % n` (slightly biased unless `n` divides 2^32).
     /// `n` must be in `1..=u32::MAX`; `n = 0` panics.
     pub fn below(&mut self, n: usize) -> usize {
+        assert!(n >= 1 && n <= u32::MAX as usize, "mulberry32::below: n must be in 1..=u32::MAX");
         (self.next_u32() % n as u32) as usize
     }
 }

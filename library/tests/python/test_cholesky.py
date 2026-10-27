@@ -38,6 +38,9 @@ def test_non_spd_reported():
         r = cholesky(np.array(c["A"]).reshape(c["n"], c["n"]))
         assert not r.success and "not positive definite" in r.message
     assert not cholesky(np.array([[np.nan]])).success
+    assert not cholesky(np.array([[np.inf]])).success
+    with pytest.raises(ValueError):
+        cholesky(np.ones((2, 3)))
     print(f"VERIFY cholesky py_not_spd cases_reported={len(cases) + 1}")
 
 
