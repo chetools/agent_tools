@@ -18,6 +18,7 @@ Any reusable routine a scientist or engineer would otherwise rewrite. Areas grow
 | `roots` | Scalar root bracketing, nonlinear systems, continuation |
 | `optimize` | Unconstrained, bounded and constrained minimization, least squares |
 | `linalg` | Dense and sparse solvers, factorizations, eigenvalues |
+| `autodiff` | Forward-mode automatic differentiation (dual numbers), derivative helpers |
 | `interpolate` | Splines, monotone interpolation, multidimensional gridded data |
 | `quadrature` | Adaptive integration, Gaussian rules |
 | `pde` | Finite difference and finite volume stencils, method of lines |

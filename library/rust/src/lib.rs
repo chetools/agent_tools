@@ -4,3 +4,4 @@
 //! dependencies, no unsafe code, no FFI glue.
 #![forbid(unsafe_code)]
 
+pub mod autodiff;

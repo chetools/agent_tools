@@ -44,3 +44,23 @@
 # tests = ["robertson", "van_der_pol_mu1000", "hires"]
 # source = "Hairer & Wanner, Solving ODEs II, Sec. IV.8; SciPy _ivp/radau.py (BSD-3-Clause)"
 # notes = "Supply an analytic Jacobian when available; finite differences cost n extra RHS calls per refresh."
+
+[[routine]]
+id = "dual"
+name = "Forward-mode dual numbers and the Real trait"
+area = "autodiff"
+problem_class = "forward_mode_derivative"
+suitable_for = ["first_derivative","second_derivative","generic_numeric_code"]
+equivalent = "jax.jvp / autograd forward mode (orientation only)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/autodiff/dual.rs"
+python = "library/python/agent_tools/autodiff/dual.py"
+example = "library/examples/rust/dual.rs"
+example_python = "library/examples/python/dual.py"
+features = ["nested_duals", "exp", "ln", "sqrt", "sin", "cos", "powi", "abs"]
+units = "dimensionless"
+verified_rtol = [1e-12, 1e-6]
+tests = ["analytic_derivatives","central_fd","nested_second_derivative","python_vs_rust"]
+source = "Griewank & Walther, Evaluating Derivatives, 2nd ed. (SIAM 2008) ch. 3; ported from chetools/claude packed-bed-runaway (own code, no third-party license)"
+notes = "Write model code once generic over Real (Rust) or with the module functions (Python); f64 and Dual give value and derivative. Dual<Dual<f64>> gives second derivatives. abs has derivative +d at exactly 0; powi(0) is constant 1; sqrt has infinite derivative at 0. Tolerances: 1e-12 vs analytic, 1e-6 vs central differences."
