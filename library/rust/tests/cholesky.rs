@@ -68,6 +68,7 @@ fn non_spd_reported() {
         assert!(f.message.contains("not positive definite"));
     }
     assert!(!cholesky(&[f64::NAN], 1).success);
+    assert!(!cholesky(&[f64::INFINITY], 1).success);
     println!("VERIFY cholesky not_spd cases_reported={}", r["cases"]["not_spd"].as_array().unwrap().len() + 1);
 }
 
