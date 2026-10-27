@@ -44,3 +44,25 @@
 # tests = ["robertson", "van_der_pol_mu1000", "hires"]
 # source = "Hairer & Wanner, Solving ODEs II, Sec. IV.8; SciPy _ivp/radau.py (BSD-3-Clause)"
 # notes = "Supply an analytic Jacobian when available; finite differences cost n extra RHS calls per refresh."
+
+[[routine]]
+id = "multigrid_poisson_cc"
+name = "Cell-centred geometric multigrid V-cycle Poisson solver (3D box, WebGPU)"
+area = "gpu"
+problem_class = "poisson_multigrid_3d"
+suitable_for = ["elliptic_pde", "pressure_projection", "neumann_or_periodic", "structured_grid", "singular_poisson"]
+equivalent = "scipy.sparse.linalg.spsolve on the 7-point Neumann/periodic Laplacian (null space fixed); pyamg / HYPRE geometric multigrid"
+status = "experimental"
+version = "0.1.0"
+rust = ""
+python = "library/python/gpu/multigrid_poisson_cc.py"
+wgsl = "library/wgsl/multigrid_poisson_cc.wgsl"
+js = "library/js/multigrid_poisson_cc.js"
+example = "library/examples/gpu/multigrid_poisson_cc.html"
+features = ["periodic_or_wall_z", "zero_flux_xy_walls", "semi_coarsening_z", "residual_history_per_cycle", "optional_rtol_early_stop", "mean_removal_solvability", "nonzero_initial_guess", "embeddable_in_compute_pass"]
+units = "h: length (m or any consistent unit); x: [X]; b and residual: [X]/length^2; arrays (NZ,N,N), index (k*N+j)*N+i"
+valid_range = "N power of two >= 4, NZ power of two >= 1 (checked, throws). Tested for N 4..64, NZ 1..32. Defaults: cycles 2, nu1 2, nu2 2, ncoarse 40."
+verified_rtol = [2e-5, 1e-3]
+tests = ["tests/python/test_multigrid_poisson_cc.py", "tests/gpu/multigrid_poisson_cc.test.js"]
+source = "chetools/claude cylinder-cavity-3d: web/fv.wgsl (multigrid section), web/fv_gpu.js (levels, V-cycle order), python/fv3d.py (neighbour_sum ... solve_pressure); generalised with own uniform struct, z boundary option, mean-removal kernels. Standard geometric multigrid, e.g. Briggs, Henson & McCormick, A Multigrid Tutorial (2nd ed.)."
+notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle. Red-black colouring by parity of i+j in every layer, Jacobi in z, so z-independent problems stay z-independent for periodic z; with zero-flux z walls they only converge to z-independence. The singular problem needs mean(b) = 0 (mean removal on by default). f32 residual floor is about 1e-6 of |b|, so rtol below about 1e-5 may never be met on the GPU. Measured convergence factor about 0.14 per V-cycle in 3D, 0.065 at NZ = 1. Tolerances: 2e-5 on the solution (relative to max |x|), 1e-3 on the residual history."

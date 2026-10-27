@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>multigrid_poisson_cc example</title>
+<h3>multigrid_poisson_cc: 16 x 16 x 8 cells, periodic z, h = 0.1</h3>
+<pre id="out">running...</pre>
+<script type="module">
+import { getDevice } from "../../js/gpu_util.js";
+import { createMultigrid } from "../../js/multigrid_poisson_cc.js";
+const out = document.getElementById("out");
+try {
+  const n = 16, nz = 8, h = 0.1;
+  // exact-solution check: x = cos(pi (i+1/2)/n) cos(2 pi (k+1/2)/nz) has laplacian ~ b (second-order accurate)
+  const b = new Float32Array(n * n * nz), exact = new Float32Array(n * n * nz);
+  const lam = (Math.PI / (n * h)) ** 2 + (2 * Math.PI / (nz * h)) ** 2;
+  for (let k = 0; k < nz; k++) for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const u = Math.cos(Math.PI * (i + 0.5) / n) * Math.cos(2 * Math.PI * (k + 0.5) / nz);
+    exact[(k * n + j) * n + i] = u; b[(k * n + j) * n + i] = -lam * u;
+  }
+  const { device } = await getDevice();
+  const mg = await createMultigrid(device, { n, nz, h, bcZ: "periodic", cycles: 8 });
+  const r = await mg.solve(b);
+  let e = 0; for (let i = 0; i < exact.length; i++) e = Math.max(e, Math.abs(r.x[i] - exact[i]));
+  out.textContent = [r.message, "RMS residual per V-cycle: " + r.residualRMS.map(v => v.toExponential(2)).join("  "),
+    "cycles used: " + r.cycles, "max |x - exact| = " + e.toExponential(2) + "  (discretisation error, O(h^2))"].join("\n");
+  mg.destroy();
+} catch (e) { out.textContent = "ERROR: " + e.message; throw e; }
+</script>
