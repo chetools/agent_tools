@@ -110,3 +110,47 @@ verified_rtol = [1e-5, 5e-3]
 tests = ["tests/gpu/particle_advect_rk2.test.js", "tests/python/test_particle_advect_rk2.py"]
 source = "chetools/claude cylinder-cavity-3d web/trails.wgsl (cs_advect, vel, vg) and web/tracers.js (velAt, rk2); trail storage, drawing, re-seeding, lifetimes, substep schedule and body hiding removed"
 notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle. Out-of-domain particles are clamped to the wall and flagged (bits 1, 2, 4 = x, y, z clamp; 8 = z wrapped), never re-seeded; a clamped particle stays on the wall because the velocity is 0 there. Tolerances: positions 2e-4..5e-3 h depending on substep count (f32 round-off grows along converging paths), |u| 5e-6..2e-3 of the top speed, flags exact. Keep umax*dt/nsub <= 0.5 h (substepCount). nsub = 0 only samples |u|."
+
+[[routine]]
+id = "workgroup_reduce"
+name = "Workgroup reduction (sum / max / min / max-abs of an f32 array, WebGPU)"
+area = "gpu"
+problem_class = "array_reduction"
+suitable_for = ["f32_array", "arbitrary_length", "scalar_result", "residual_norms", "diagnostics"]
+equivalent = "numpy.sum / numpy.max / numpy.min / numpy.abs(x).max; math.fsum as the exact sum"
+status = "experimental"
+version = "0.1.0"
+rust = ""
+python = "library/python/gpu/workgroup_reduce.py"
+wgsl = "library/wgsl/workgroup_reduce.wgsl"
+js = "library/js/workgroup_reduce.js"
+example = "library/examples/gpu/workgroup_reduce.html"
+features = ["sum", "max", "min", "maxabs", "any_length_n_ge_1", "2d_dispatch_over_65535_workgroups", "result_stays_on_gpu_reduceToBuffer"]
+units = "result has the units of the input values; n dimensionless"
+valid_range = "n from 1 to 2^32-1 (tested 1 to 1e7; 2D dispatch path tested by lowering maxGroupsX); finite f32 values (NaN gives undefined max/min)"
+verified_rtol = [0.0, 1e-6]
+tests = ["tests/gpu/workgroup_reduce.test.js", "tests/python/test_workgroup_reduce.py"]
+source = "chetools/claude cylinder-cavity-3d web/lbm.wgsl (wg_reduce4, reduce) and web/fv.wgsl (stats, stats_final)"
+notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle. Two passes: 1024 elements per workgroup, then one final workgroup. Sum order differs from numpy, so the sum tolerance (1e-6) is relative to sum(|x|), not |sum|; max/min/maxabs are exact (tolerance 0). Worst-case f32 sum bound about 3.5e-6*sum|x| at n = 1e7 (stated, not measured; measured 1.4e-10)."
+
+[[routine]]
+id = "histogram_range"
+name = "Robust colour-scale range (max |x|, histogram, percentile) with optional mask (WebGPU)"
+area = "gpu"
+problem_class = "percentile_range"
+suitable_for = ["colour_scale", "heavy_tailed_fields", "masked_regions", "signed_or_unsigned"]
+equivalent = "numpy.histogram on sqrt(|x|/max) and numpy.quantile(|x|, pct, method='inverted_cdf')"
+status = "experimental"
+version = "0.1.0"
+rust = ""
+python = "library/python/gpu/histogram_range.py"
+wgsl = "library/wgsl/histogram_range.wgsl"
+js = "library/js/histogram_range.js"
+example = "library/examples/gpu/histogram_range.html"
+features = ["max_abs", "sqrt_scale_histogram", "percentile_upper_bin_edge", "symmetric_or_unsigned_range", "optional_u32_mask", "nan_inf_skipped", "2d_dispatch", "histogram_readback"]
+units = "field values, lo, hi and max in the units of the field; pct a fraction in (0, 1]; counts dimensionless; mask u32 (non-zero = ignored)"
+valid_range = "n 1 to 2^32-1 (tested to 4e6; 2D dispatch path tested); nbins >= 1 (default 2048); pct in (0, 1]"
+verified_rtol = [0.0, 1e-6]
+tests = ["tests/gpu/histogram_range.test.js", "tests/python/test_histogram_range.py"]
+source = "chetools/claude cylinder-cavity-3d web/render.wgsl (cs_clear, cs_max, cs_hist, cs_range, counted) and web/render.js; the cylinder in_body test replaced by an optional mask buffer"
+notes = "No Rust: the WGSL kernel is the fast implementation and the Python module is the f64 oracle. hi is the upper edge of the percentile's bin, so 0 <= hi - exact percentile <= 2*max/nbins; hi matches the f64 reference to 1e-6 relative, counts exactly unless elements lie within about 1e-6 of a bin edge. A large outlier widens all bins. pct*count is formed in f32: use dyadic pct (0.5, 0.875, ...) when the exact rank matters. The statistic is always |x|."

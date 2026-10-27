@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>workgroup_reduce example</title>
+<h1>workgroup_reduce</h1>
+<pre id="out">running...</pre>
+<script type="module">
+import { getDevice, storage } from "../../js/gpu_util.js";
+import { createReducer } from "../../js/workgroup_reduce.js";
+const out = document.getElementById("out");
+try {
+  const { device } = await getDevice();
+  const n = 100001, x = new Float32Array(n);
+  for (let i = 0; i < n; i++) x[i] = Math.fround(Math.sin(i) * (1 + (i % 7)));   // mixed signs
+  const buf = storage(device, x), red = await createReducer(device);
+  let s = 0, mx = -Infinity, mn = Infinity, ma = 0;
+  for (const v of x) { s += v; mx = Math.max(mx, v); mn = Math.min(mn, v); ma = Math.max(ma, Math.abs(v)); }
+  const lines = [`n = ${n}`];
+  for (const [op, ref] of [["sum", s], ["max", mx], ["min", mn], ["maxabs", ma]])
+    lines.push(`${op.padEnd(7)} GPU ${(await red.reduce(buf, n, op)).toPrecision(9)}   JS float64 ${ref.toPrecision(9)}`);
+  out.textContent = lines.join("\n");
+  window.EXAMPLE_DONE = true;
+} catch (e) { out.textContent = "ERROR: " + e; window.EXAMPLE_DONE = false; }
+</script>

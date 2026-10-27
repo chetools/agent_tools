@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>histogram_range example</title>
+<h1>histogram_range</h1>
+<pre id="out">running...</pre>
+<script type="module">
+import { getDevice, storage } from "../../js/gpu_util.js";
+import { createRangeFinder } from "../../js/histogram_range.js";
+const out = document.getElementById("out");
+try {
+  const { device } = await getDevice();
+  const n = 100000, x = new Float32Array(n), mask = new Uint32Array(n);
+  for (let i = 0; i < n; i++) { const u = ((i * 7919 + 13) % 10007 + 0.5) / 10007; x[i] = (i % 2 ? -1 : 1) * u * u * u; }
+  x[5] = 50; mask[5] = 1;                       // one huge value, masked out
+  const rf = await createRangeFinder(device, { nbins: 2048 });
+  const r = await rf.range(storage(device, x), n, { pct: 0.995, symmetric: true, maskBuf: storage(device, mask) });
+  const v = Array.from(x, Math.abs).filter((_, i) => !mask[i]).sort((a, b) => a - b);
+  out.textContent = [`n = ${n} (1 masked entry of value 50)`,
+    `GPU  lo ${r.lo.toPrecision(6)}  hi ${r.hi.toPrecision(6)}  max ${r.max.toPrecision(6)}  count ${r.count}`,
+    `exact 99.5 % value of |x|: ${v[Math.ceil(0.995 * v.length) - 1].toPrecision(6)}  (hi is its bin upper edge; bin width <= ${(2 * r.max / 2048).toPrecision(2)})`].join("\n");
+  window.EXAMPLE_DONE = true;
+} catch (e) { out.textContent = "ERROR: " + e; window.EXAMPLE_DONE = false; }
+</script>

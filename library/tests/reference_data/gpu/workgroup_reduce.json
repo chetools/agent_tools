@@ -1,0 +1,96 @@
+{
+ "_header": {
+  "generator": "library/python/gpu/workgroup_reduce.py make_reference()",
+  "python": "3.13.17",
+  "numpy": "2.5.3",
+  "precision": "float64",
+  "date": "2026-10-27"
+ },
+ "hash": "fmix32(i*2654435761+seed); m=(h&0xFFFFFF)-2^23+bias; e=(h>>24)%(emax-emin+1)+emin; v=m*2^(e-10)",
+ "cases": [
+  {
+   "name": "n=1",
+   "n": 1,
+   "seed": 1,
+   "bias": 0,
+   "emin": -20,
+   "emax": 20,
+   "maxGroupsX": 0,
+   "sum": -3344770048.0,
+   "sum_abs": 3344770048.0,
+   "max": -3344770048.0,
+   "min": -3344770048.0,
+   "maxabs": 3344770048.0
+  },
+  {
+   "name": "n=1000 (partial block)",
+   "n": 1000,
+   "seed": 2,
+   "bias": 0,
+   "emin": -20,
+   "emax": 20,
+   "maxGroupsX": 0,
+   "sum": 4772291808.590885,
+   "sum_abs": 172884611879.70013,
+   "max": 6728786944.0,
+   "min": -8577217536.0,
+   "maxabs": 8577217536.0
+  },
+  {
+   "name": "n=1025 (one element in 2nd block)",
+   "n": 1025,
+   "seed": 3,
+   "bias": 0,
+   "emin": -20,
+   "emax": 20,
+   "maxGroupsX": 0,
+   "sum": 45012083136.98961,
+   "sum_abs": 272827072477.46484,
+   "max": 8007585792.0,
+   "min": -8392645632.0,
+   "maxabs": 8392645632.0
+  },
+  {
+   "name": "n=300001, 2D dispatch (maxGroupsX=64)",
+   "n": 300001,
+   "seed": 4,
+   "bias": 0,
+   "emin": -20,
+   "emax": 20,
+   "maxGroupsX": 64,
+   "sum": 484229337603.04047,
+   "sum_abs": 59948570150064.27,
+   "max": 8586228736.0,
+   "min": -8588120064.0,
+   "maxabs": 8588120064.0
+  },
+  {
+   "name": "n=2e5 all negative (max identity)",
+   "n": 200000,
+   "seed": 5,
+   "bias": -8388608,
+   "emin": 0,
+   "emax": 0,
+   "maxGroupsX": 0,
+   "sum": -1638965662.609375,
+   "sum_abs": 1638965662.609375,
+   "max": -0.1806640625,
+   "min": -16383.96875,
+   "maxabs": 16383.96875
+  },
+  {
+   "name": "n=1e7 mixed sign, 2^40 dynamic range",
+   "n": 10000000,
+   "seed": 6,
+   "bias": 0,
+   "emin": -20,
+   "emax": 20,
+   "maxGroupsX": 0,
+   "sum": 682098284749.1075,
+   "sum_abs": 2015801236585924.0,
+   "max": 8589911040.0,
+   "min": -8589922304.0,
+   "maxabs": 8589922304.0
+  }
+ ]
+}
