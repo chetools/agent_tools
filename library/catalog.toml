@@ -146,6 +146,46 @@ source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
 
 [[routine]]
+id = "hermite_extremum"
+name = "Maximum or minimum of a piecewise cubic Hermite interpolant"
+area = "interpolate"
+problem_class = "interpolant_extremum"
+suitable_for = ["peak_of_ode_solution","accepted_steps_with_slopes","sharp_peaks","automatic_differentiation"]
+equivalent = "scipy.interpolate.CubicHermiteSpline + dense grid + scipy.optimize.minimize_scalar(bounded) in each interval"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/interpolate/hermite_extremum.rs"
+python = "library/python/agent_tools/interpolate/hermite_extremum.py"
+example = "library/examples/rust/hermite_extremum.rs"
+example_python = "library/examples/python/hermite_extremum.py"
+features = ["max_or_min","returns_location_value_interval","global_over_all_intervals","dual_numbers_envelope_theorem"]
+units = "t and returned t share a unit; y and returned value share a unit; dy = unit of y per unit of t"
+verified_rtol = [2e-16, 1e-12]
+tests = ["exact_cubic","sine_coarse_vs_scipy","narrow_gaussian_4th_order_convergence","edge_cases_ties_monotone_degenerate","ad_derivative_vs_finite_differences","python_vs_rust"]
+source = "Burden & Faires, Numerical Analysis, 9th ed., sec. 3.4; Press et al., Numerical Recipes, 3rd ed., eq. 5.6.4; ported and generalised from chetools/claude packed-bed-runaway hermite_peak (own code)"
+notes = "O(n), no iteration. Source searched only the two intervals around the largest sample; this version searches all intervals and supports min. Ties: smallest t wins and a knot beats an interior point of equal value. Only sign changes of the derivative count (discriminant > 0; the source used >= 0). Invalid input (n<2, unequal lengths, non-finite, t not strictly increasing) returns success=false. Rust is generic over Real (Dual); Python is float only. Expectation, not measured: the location of a flat peak is ill-conditioned (error up to about sqrt(eps)), the value is not."
+
+[[routine]]
+id = "cubic_hermite"
+name = "Piecewise cubic Hermite evaluator"
+area = "interpolate"
+problem_class = "hermite_interpolation"
+suitable_for = ["dense_output_from_values_and_slopes","ode_step_interpolation","automatic_differentiation"]
+equivalent = "scipy.interpolate.CubicHermiteSpline"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/interpolate/cubic_hermite.rs"
+python = "library/python/agent_tools/interpolate/cubic_hermite.py"
+example = "library/examples/rust/hermite_extremum.rs"
+example_python = "library/examples/python/hermite_extremum.py"
+features = ["extrapolates_end_cubics","single_piece_helper_hermite_piece","vectorised_python"]
+units = "t and x share a unit; y and result share a unit; dy = unit of y per unit of t"
+verified_rtol = [5e-16, 1e-13]
+tests = ["evaluator_vs_scipy_incl_extrapolation_and_knots","exact_cubic_reproduced","python_vs_rust"]
+source = "Burden & Faires, Numerical Analysis, 9th ed., sec. 3.4; ported from chetools/claude packed-bed-runaway hermite_peak (own code)"
+notes = "t strictly increasing is not checked (panics/raises only on length mismatch or n<2). x outside the data uses the first or last cubic; x equal to a knot uses the interval to its right. The example pair is shared with hermite_extremum."
+
+[[routine]]
 id = "rosenbrock23"
 name = "Adaptive Rosenbrock 2(3) stiff integrator (ode23s), generic over Real"
 area = "ode"
