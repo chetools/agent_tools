@@ -12,6 +12,7 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `cholesky` 0.1.0 (experimental, `linalg`): Cholesky factorization and triangular solves.
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
 - `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.
+- `rtd_analysis` 0.1.0 (experimental, `stats`): RTD moments with exponential tail extrapolation, tanks-in-series and axial-dispersion models, moment and least-squares fits of N and Pe, two-plane dispersion analysis.
 - `lhs_maximin` 0.1.0 (experimental, `stats`): maximin Latin hypercube design, best of k random Latin hypercubes.
 - `bfgs` 0.1.0 (experimental, `optimize`): BFGS with Armijo backtracking, unconstrained.
 - `bfgs` 0.1.0 (review fixes): stall stop (step leaves `x` unchanged, `success = false`, "no progress"), validation of `gtol` and `max_iter`, approximate-Wolfe acceptance in the noise regime (ill-conditioned quadratics no longer stall near max|g| = 1e-8), evaluation-cost documentation from the 8-D quadratic case. Only the Rust 5-D quadratic case changed (nit 14 to 13, nfev 31 to 26, now equal to Python).

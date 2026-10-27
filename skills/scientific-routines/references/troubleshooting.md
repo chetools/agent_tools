@@ -69,6 +69,16 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
 
+## Residence-time analysis (`rtd_analysis`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Variance or N changes strongly with the record length | Tail cut off, or no tail applied (`tail_decay_time` is None) | Record until C is below about 1 % of peak; check the decaying tail is positive; use `fit_lsq`. |
+| Variance of a noisy record is too large (N too small) | Noise in the tail is clipped to positive values and adds area and spread; the tail fit is skipped when any tail sample is <= 0 | Subtract the baseline, truncate where the signal reaches the noise, or use `fit_lsq`. |
+| `fit_moments` fails for closed-closed | Variance/mean^2 is >= 1 (closed-closed maximum) | Use open-open or tanks, or check the record. |
+| `fit_lsq` reports "parameter at the edge of its search range" | N or Pe outside [0.05, 1e4], or tau outside 0.2-5 times the data mean, or a multi-peak signal | Fix tau (pass `tau`), rescale, or inspect the data; the search is a unimodal golden section. |
+| Pe from `fit_dispersion_planes` is negative or huge | Variance or mean did not increase between the planes | Use the same pulse and tail handling at both planes; check the plane order. |
+
 ## Design of experiments (`lhs_maximin`)
 
 | Symptom | Likely cause | Fix |

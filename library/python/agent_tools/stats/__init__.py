@@ -1,1 +1,1 @@
-"""Statistics, regression and design of experiments."""
+"""Statistics, regression, design of experiments and residence-time analysis."""
