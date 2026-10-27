@@ -144,3 +144,23 @@ verified_rtol = [0, 0]
 tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
 source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
+
+[[routine]]
+id = "block_tridiagonal"
+name = "Block-tridiagonal LU (block Thomas), runtime block size"
+area = "linalg"
+problem_class = "block_tridiagonal_linear_solve"
+suitable_for = ["banded_jacobians_1d_discretisations","factor_once_solve_many","generic_over_real","dual_numbers"]
+equivalent = "numpy.linalg.solve on the assembled matrix; scipy.linalg.solve_banded"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/linalg/block_tridiagonal.rs"
+python = "library/python/agent_tools/linalg/block_tridiagonal.py"
+example = "library/examples/rust/block_tridiagonal.rs"
+example_python = "library/examples/python/block_tridiagonal.py"
+features = ["runtime_block_size","factor_once_solve_many","in_block_partial_pivoting","growth_indicator","singular_block_report","dual_entries"]
+units = "dimensionless (x has units of b / A)"
+verified_rtol = [1e-14, 1e-12]
+tests = ["block_dominant_m_nb_1_5_2_50_3_200_5_40","scalar_vs_classical_thomas","weak_dominance_laplacian","zero_diagonal_blocks_in_block_pivoting","singular_first_block_reported","dual_solution_derivative","python_vs_rust"]
+source = "Golub & Van Loan, Matrix Computations, 4th ed., Sec. 4.5.1; Press et al., Numerical Recipes, 3rd ed., Sec. 2.4; generalised from the 2x2 block solver of chetools/claude packed-bed-runaway"
+notes = "Blocks are row-major m*m in flat slices (lower[k]=block (k+1,k), upper[k]=block (k,k+1), nb-1 each). Pivoting only within diagonal blocks (lu_dense), none across blocks: needs block diagonal dominance, SPD or M-matrix structure. An exactly singular eliminated block fails with success=false even if the full matrix is nonsingular; a near-singular block is not detected, check `growth` (max ||C_i||_inf) and the residual. Uses LU solves instead of the source's explicit 2x2 inverses."
