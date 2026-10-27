@@ -2,6 +2,7 @@
 
     python library/tests/gpu/gen_reference.py           # write library/tests/reference_data/gpu/<id>.json
     python library/tests/gpu/gen_reference.py --check   # regenerate in memory, fail if a stored file differs
+    python library/tests/gpu/gen_reference.py [--check] <id> ...   # only these routines
 
 Each routine's Python reference module ``library/python/gpu/<id>.py`` provides ``make_reference() -> dict``
 (JSON-serialisable, float64 values).  The generator adds a ``_header`` recording the generator, library
@@ -62,10 +63,11 @@ def close(a, b, path="", rtol=1e-12):
 
 def main():
     check = "--check" in sys.argv
-    if not IDS:
+    ids = [a for a in sys.argv[1:] if not a.startswith("--")] or IDS
+    if not ids:
         sys.exit("no GPU tests found")
     bad = 0
-    for mod_id in IDS:
+    for mod_id in ids:
         mod = importlib.import_module(f"gpu.{mod_id}")
         data = mod.make_reference()
         if not isinstance(data, dict) or not data:
