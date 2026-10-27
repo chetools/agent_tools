@@ -144,3 +144,63 @@ verified_rtol = [0, 0]
 tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
 source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
+
+[[routine]]
+id = "lmtd"
+name = "Log-mean temperature difference with partial derivatives"
+area = "process"
+problem_class = "heat_exchanger_driving_force"
+suitable_for = ["heat_exchanger_sizing","gradient_based_network_optimisation"]
+equivalent = "none (closed form (a-b)/ln(a/b) without a safe equal-difference limit)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/process/lmtd.rs"
+python = "library/python/agent_tools/process/lmtd.py"
+example = "library/examples/rust/lmtd.rs"
+example_python = "library/examples/python/lmtd.py"
+features = ["series_branch_near_equal_differences","partial_derivatives_both_terminal_differences","nan_on_nonpositive_input"]
+units = "inputs and L in K (any consistent temperature difference); derivatives dimensionless"
+verified_rtol = [1e-11, 1e-8]
+tests = ["vs_mpmath_50_digits_ratios_1e-6_to_1e6","switch_region_1e-12_to_1e-2","finite_differences_both_sides_of_switch","python_vs_rust"]
+source = "Kern, Process Heat Transfer (1950); ported from chetools/claude heat-exchanger-network"
+notes = "Switch: |dT1-dT2| < 1e-4 * mean uses L ~ m - d^2/(12 m) (and its derivatives); measured errors vs 50-digit values: L 5e-13 relative at the threshold, 2e-16 elsewhere. Derivatives lose digits to cancellation in the closed form just above the threshold (4.9e-9 absolute at |d|/m = 1.01e-4, 1.4e-9 at 2e-4, 5e-12 at 1e-3); the series branch is accurate to 2e-14 at the threshold. Returns NaN for non-positive or non-finite input (the source did not guard this)."
+
+[[routine]]
+id = "hx_capital_cost"
+name = "Shell-and-tube exchanger bare-module cost (Seider, Turton) with dC/dA, and capital recovery factor"
+area = "process"
+problem_class = "equipment_cost_correlation"
+suitable_for = ["exchanger_network_cost_optimisation","annualised_capital_cost"]
+equivalent = "BioSTEAM HX costing (Seider coefficients), IDAES SSLW costing (Seider, CE 500), eqcost / CAPCOST (Turton)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/process/hx_capital_cost.rs"
+python = "library/python/agent_tools/process/hx_capital_cost.py"
+example = "library/examples/rust/hx_capital_cost.rs"
+example_python = "library/examples/python/hx_capital_cost.py"
+features = ["seider_floating_fixed_utube","seider_material_pressure_length_factors","turton_floating_head","analytic_dC_dA","area_range_flags","capital_recovery_factor"]
+units = "area m2; cost USD of the correlation's index year (Seider CE 567, Turton CEPCI 397); dC/dA USD/m2; pressure psig (Seider) or barg (Turton); CRF 1/yr"
+verified_rtol = [1e-12, 1e-11]
+tests = ["material_pressure_length_tables_vs_idaes_listing","turton_eqcost_case_3e-3","values_and_complex_step_derivatives_324_cases","finite_differences_both_sides_of_clamp","crf_vs_mpmath","python_vs_rust"]
+source = "Seider, Seader, Lewin, Widagdo et al., Product and Process Design Principles (3rd ed. Eq. 22.43-22.44 per IDAES; 4th ed. Eq. 16.44 per task statement, not checked); Turton et al., Analysis, Synthesis and Design of Chemical Processes, Appendix A; coefficient sets as in chetools/claude heat-exchanger-network (BioSTEAM for Seider, eqcost for Turton)"
+notes = "NOT verified against the books: the Seider base-cost coefficients (BioSTEAM, CE 567; IDAES lists 11.9052 instead of 12.0310 for the floating head at CE 500) and the Turton K, B, C and non-CS F_M. Checked: F_M, F_P and F_L against the IDAES listing, Turton CS case against eqcost (1.4e-4 relative in C_BM). Seider bare-module rule C_B (F_BM + F_L F_P F_M - 1), F_BM = 3.17, is BioSTEAM's, not a book equation. Seider range 150-12000 ft2 (below: cost of 150 ft2 and slope 0; above: extrapolated, above_range set); Turton range 10-1000 m2, same behaviour. Turton F_M is same-material only. Costs are not escalated: multiply by index_new/index_basis. The capital recovery factor uses log1p/expm1 (differs from the textbook evaluation only in rounding; that evaluation loses 4 digits at i = 1e-12)."
+
+[[routine]]
+id = "pinch_targets"
+name = "Pinch targets: problem table, composite curves, grand composite curve"
+area = "process"
+problem_class = "heat_integration_targeting"
+suitable_for = ["minimum_utility_targets","pinch_location","composite_and_grand_composite_curves"]
+equivalent = "problem table algorithm; heat-cascade LP (scipy.optimize.linprog) used as the independent check"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/process/pinch_targets.rs"
+python = "library/python/agent_tools/process/pinch_targets.py"
+example = "library/examples/rust/pinch_targets.rs"
+example_python = "library/examples/python/pinch_targets.py"
+features = ["problem_table_cascade","hot_cold_composite_curves_balanced","grand_composite_curve","pinch_hot_temperature"]
+units = "temperatures K or degC (one unit for all streams); cp kW/K; heat kW; dt_min K"
+verified_rtol = [1e-9, 1e-6]
+tests = ["kemp_four_stream_published_targets","25_furman_instances_vs_highs_cascade_lp","25_furman_published_utility_costs","curve_balance_and_minimum_gap","python_vs_rust"]
+source = "Linnhoff et al., User Guide on Process Integration (1982); Kemp, Pinch Analysis and Process Integration, 2nd ed. (2007); Letsios, Kouyialis, Misener (2018) benchmark data (Apache-2.0); ported from chetools/claude heat-exchanger-network"
+notes = "One hot and one cold utility level (single QH, QC); utility temperatures and forbidden matches are not modelled (22sp-ph of the Furman set differs from its published cost for that reason and is excluded). Hot streams keep their temperatures, cold streams are shifted up by dt_min; t_shifted gives the textbook scale. Only the lowest zero-flow boundary is reported as the pinch; a pinch at the first or last boundary indicates a threshold problem. Isothermal streams carry no duty (split phase changes into small spans). The Kemp numbers (20, 60 kW, pinch 85 C shifted) were taken from the pina package README quoting the book, not from the book. LP/MILP network targets of the source are not ported."

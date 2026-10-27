@@ -28,6 +28,7 @@ Any reusable routine a scientist or engineer would otherwise rewrite. Areas grow
 | `units` | Unit conversion and dimensional checks |
 | `properties` | Physical property correlations (thermodynamic, transport), with data provenance |
 | `io` | Reading and writing common scientific data formats |
+| `process` | Process-engineering calculations: heat exchangers (LMTD, capital cost), heat integration (pinch targets) |
 
 New areas are added through the same pull-request process as routines (see `AGENTS.md`).
 

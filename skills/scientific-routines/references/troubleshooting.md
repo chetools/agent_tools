@@ -66,3 +66,14 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
+
+## Process engineering (`lmtd`, `hx_capital_cost`, `pinch_targets`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `lmtd` returns NaN | A terminal difference is <= 0 (temperature cross) or not finite | Treat as infeasible; check stream temperatures and flow arrangement. |
+| LMTD derivative differs from a finite difference at the 1e-8 level near equal terminal differences | Cancellation in the closed form just above the series switch (4.9e-9 at the threshold) | Expected; finite differences across the switch also lose accuracy. |
+| `hx_capital_cost` has zero gradient for small exchangers | Area below the correlation range: the cost of the lower limit is charged (`clamped_below`) | Bound the area from below at the limit, or use a different cost law. |
+| Seider and IDAES/Turton costs differ by a factor | Different cost-index years (Seider CE 567 here, IDAES CE 500, Turton CEPCI 397) | Escalate with index_new / index_basis before comparing. |
+| `pinch_targets` pinch is at the highest or lowest temperature | Threshold problem (only hot or only cold utility needed) | No true pinch; read the targets and `heat_flow`. |
+| `pinch_targets` targets differ from a hand calculation by a shift | Hot/cold temperature shift convention (hot scale here: cold + ΔTmin) | Compare heat flows, not shifted temperatures, or use `t_shifted`. |
