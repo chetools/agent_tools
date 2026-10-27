@@ -144,3 +144,23 @@ verified_rtol = [0, 0]
 tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
 source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
+
+[[routine]]
+id = "rtd_analysis"
+name = "Residence-time distribution analysis: moments, tail extrapolation, dispersion and tanks-in-series fits"
+area = "stats"
+problem_class = "residence_time_distribution"
+suitable_for = ["tracer_pulse_response","mean_and_variance_with_truncated_tail","axial_dispersion_Pe","tanks_in_series_N","two_detector_dispersion"]
+equivalent = "none in SciPy; comparisons use scipy.optimize.curve_fit and scipy.integrate"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/stats/rtd_analysis.rs"
+python = "library/python/agent_tools/stats/rtd_analysis.py"
+example = "library/examples/rust/rtd_analysis.rs"
+example_python = "library/examples/python/rtd_analysis.py"
+features = ["trapezoid_moments","exponential_tail_extrapolation","square_pulse_correction","tanks_in_series_E","open_open_dispersion_E","closed_closed_variance","moment_fits_Pe_N","least_squares_fits_golden_section","two_plane_dispersion"]
+units = "t in s, C any consistent unit, E in 1/s, theta and Pe and N dimensionless"
+verified_rtol = [1e-9, 5e-2]
+tests = ["moments_vs_scipy_1e-9","tail_extrapolation_exact_exponential","pulse_correction_closed_form","two_plane_exact","moment_inversion_exact","closed_closed_variance_vs_pole_series","lsq_vs_curve_fit_1e-5","noisy_3pct_lsq_vs_moments","failure_modes","python_vs_rust"]
+source = "Levenspiel, Chemical Reaction Engineering 3rd ed. ch. 11 and 13; Fogler, Elements of Chemical Reaction Engineering ch. 18-19 (equation numbers not checked); ported from chetools/claude porous-media-lbm (tail_fit, rtd_moments, fit_dispersion, E_dispersion, E_tanks); moment inversions and least-squares fits are new"
+notes = "Split decision: one entry, because moments, model curves and fits share the same definitions and are used together. open-open E is the unbounded-medium solution seen as concentration (mean 1+2/Pe, variance 2/Pe+8/Pe^2); closed-closed is provided as moments only (no E curve). Tail extrapolation is exact for exponential tails but overestimates the variance by about 4 % for tanks records cut at 2 tau (gamma tail is not exponential); noisy tails (negative samples) disable it. Moments of noisy records are biased high (27 % in N for 3 % noise), use fit_lsq there. fit_lsq is a nested golden-section search: assumes unimodality, flags a parameter at the edge of [0.05, 1e4]. taylor_aris_plates from the source was not ported (geometry-specific correlation)."
