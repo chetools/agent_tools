@@ -281,10 +281,15 @@ pub fn rosenbrock23<T: Real>(
         for i in 0..n {
             let e = (h / 6.0) * (k1[i].val() - 2.0 * k2[i].val() + k3[i].val());
             let sc = atol(i) + opts.rtol * y[i].val().abs().max(yt[i].val().abs());
-            err = err.max((e / sc).abs());
-            let es = (h / 6.0) * (k1[i].deriv() - 2.0 * k2[i].deriv() + k3[i].deriv());
-            let ss = atol(i) + opts.rtol * dmax;
-            err = err.max((es / ss).abs());
+            // a NaN term must reach the `is_finite` test below; f64::max would drop it
+            for r in [(e / sc).abs(), {
+                let es = (h / 6.0) * (k1[i].deriv() - 2.0 * k2[i].deriv() + k3[i].deriv());
+                (es / (atol(i) + opts.rtol * dmax)).abs()
+            }] {
+                if r.is_nan() || r > err {
+                    err = r;
+                }
+            }
         }
         if !err.is_finite() {
             err = 1e10;

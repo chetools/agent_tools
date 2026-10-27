@@ -233,6 +233,18 @@ fn failures_are_reported() {
 }
 
 #[test]
+fn nan_rhs_is_not_accepted() {
+    // f turns NaN for t > 0.5: the NaN error estimate must reject the step, so the run fails
+    // instead of returning success with a NaN state.
+    let f = |t: f64, y: &[f64], d: &mut [f64]| d[0] = if t > 0.5 { f64::NAN } else { -y[0] };
+    let j = |_: f64, _: &[f64], jm: &mut [f64]| jm[0] = -1.0;
+    let r = rosenbrock23(f, j, None, (0.0, 1.0), &[1.0], &Rosenbrock23Options::default());
+    println!("VERIFY rosenbrock23 nan_rhs success={} message={:?}", r.success, r.message);
+    assert!(!r.success);
+    assert!(r.y.iter().all(|v| v.is_finite()));
+}
+
+#[test]
 fn per_component_atol_is_used() {
     // y2 is ~1e-9 throughout: a loose scalar atol ignores it, a per-component atol resolves it
     let f = |_: f64, y: &[f64], d: &mut [f64]| {

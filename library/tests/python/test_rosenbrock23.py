@@ -179,6 +179,16 @@ def test_failures_are_reported():
     print(f"VERIFY rosenbrock23 py_blowup message={rosenbrock23(f, j, (0.0, 2.0), [1.0]).message!r}")
 
 
+def test_nan_rhs_is_not_accepted():
+    # f turns NaN for t > 0.5: the NaN error estimate must reject the step (run fails, state stays finite)
+    f = lambda t, y, d: d.__setitem__(0, float("nan") if t > 0.5 else -y[0])  # noqa: E731
+    j = lambda t, y, jm: jm.__setitem__(0, -1.0)  # noqa: E731
+    r = rosenbrock23(f, j, (0.0, 1.0), [1.0])
+    print(f"VERIFY rosenbrock23 py_nan_rhs success={r.success} message={r.message!r}")
+    assert not r.success
+    assert all(math.isfinite(v) for v in r.y[-1])
+
+
 def test_per_component_atol_is_used():
     def f(t, y, d):
         d[0] = -y[0]

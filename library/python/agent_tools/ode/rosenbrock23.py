@@ -172,10 +172,11 @@ def rosenbrock23(f, jac, t_span, y0, dfdt=None, rtol=1e-5, atol=1e-8, atol_vec=N
         for i in range(n):
             e = (h / 6.0) * (val(k1[i]) - 2.0 * val(k2[i]) + val(k3[i]))
             sc = atols[i] + rtol * max(abs(val(y[i])), abs(val(yt[i])))
-            err = max(err, abs(e / sc))
             es = (h / 6.0) * (deriv(k1[i]) - 2.0 * deriv(k2[i]) + deriv(k3[i]))
             ss = atols[i] + rtol * dmax
-            err = max(err, abs(es / ss))
+            for r in (abs(e / sc), abs(es / ss)):
+                if math.isnan(r) or r > err:             # max() would drop a NaN term
+                    err = r
         if not math.isfinite(err):
             err = 1e10
         if err <= 1.0:
