@@ -21,6 +21,8 @@
 //!    step is returned and the step is not counted. (A rule on `f` not decreasing was tried and
 //!    rejected: near convergence `f` stops changing in floating point well before `max|g|`
 //!    reaches a tolerance like 1e-10, and the run still converges.)
+//!    Also stop with "no progress" if `max|g|` reaches no new lowest value in `STALL_ITERS` = 20 consecutive
+//!    accepted steps (rounding-level wandering of `x` by a few ulps, which the first test misses).
 //! 5. Update `H` unless the curvature `s.y <= SY_MIN`; accept the step.
 //!
 //! The inverse Hessian starts as the identity (no scaling), so the first step is a steepest-descent
@@ -30,6 +32,15 @@
 
 /// Sufficient-decrease constant `c1` of the Armijo condition (dimensionless).
 pub const C1: f64 = 1e-4;
+/// Relative tolerance on `f` of the approximate-Wolfe acceptance (dimensionless): a trial point may have
+/// `f1 <= f + APPROX_EPS |f|` when the slope condition below holds (Hager & Zhang 2005 use 1e-6).
+pub const APPROX_EPS: f64 = 1e-6;
+/// Slope factor of the approximate-Wolfe acceptance (dimensionless): the slope `g1.p` at the trial point
+/// must satisfy `g1.p >= SIGMA g.p` (Hager & Zhang 2005 use 0.9).
+pub const SIGMA: f64 = 0.9;
+/// Stall limit (iterations): the run stops with "no progress" when `max|g|` has not reached a new lowest
+/// value in this many consecutive accepted steps (rounding-level wandering; `gtol` below attainable accuracy).
+pub const STALL_ITERS: usize = 20;
 /// Smallest accepted line-search step length (dimensionless, relative to the direction `p`).
 pub const MIN_STEP: f64 = 1e-10;
 /// The inverse-Hessian update is skipped when `s.y <= SY_MIN`. Absolute threshold, in
@@ -136,6 +147,8 @@ pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options:
     };
     let mut h = vec![0.0; p * p];
     eye(&mut h);
+    let mut best_gn = gn;
+    let mut since_best = 0usize;
     let mut z1 = vec![0.0; p];
     let mut g1 = vec![0.0; p];
     loop {
@@ -169,6 +182,17 @@ pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options:
             nfev += 1;
             if f1 <= f + C1 * a * gp {
                 break f1;
+            }
+            // Approximate Wolfe acceptance (Hager & Zhang 2005, eq. 4.1), for the noise regime: `f` is flat to
+            // rounding near the minimum, so the Armijo test can reject every step although the gradient shrinks.
+            // Accept if f1 <= f + APPROX_EPS |f| and the slope along p is between SIGMA g.p (negative) and
+            // (2 C1 - 1) g.p (about -g.p), i.e. the slope did not grow in size, and max|g| decreased (so the noise
+            // regime cannot wander: every such step lowers max|g|).
+            if f1 <= f + APPROX_EPS * f.abs() && f1.is_finite() && max_norm(&g1) < gn {
+                let dg: f64 = (0..p).map(|i| g1[i] * dir[i]).sum();
+                if dg >= SIGMA * gp && dg <= (2.0 * C1 - 1.0) * gp {
+                    break f1;
+                }
             }
             a *= 0.5;
             if a < MIN_STEP {
@@ -210,6 +234,16 @@ pub fn bfgs<F: FnMut(&[f64], &mut [f64]) -> f64>(mut fg: F, x0: &[f64], options:
         nit += 1;
         if !gn.is_finite() {
             return fail(z, f, gn, "non-finite gradient at an accepted point".to_string(), nit, nfev);
+        }
+        if gn < best_gn {
+            best_gn = gn;
+            since_best = 0;
+        } else {
+            since_best += 1;
+            if since_best >= STALL_ITERS {
+                let msg = format!("no progress: max|grad| not below {best_gn:e} in {STALL_ITERS} steps (gtol below attainable accuracy?)");
+                return fail(z, f, gn, msg, nit, nfev);
+            }
         }
     }
 }

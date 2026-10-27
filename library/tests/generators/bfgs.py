@@ -13,8 +13,7 @@ Cases (all unconstrained, gradient analytic):
                     seeded Gaussian matrix, RandomState(SEED8 = SEED + 3)), rounded to 6 decimals: eigenvalues 1 to 1e3
                     (condition number 1e3). The cost case: halving-only Armijo needs several times SciPy's nfev
                     here (a Wolfe line search accepts the unit step on a quadratic far more often).
-                    Seed chosen so that both the Python and the Rust objective summation orders converge at
-                    gtol 1e-10: with other seeds the run stalls near max|g| = 1e-8, where s.y falls below SY_MIN.
+                    Seed 3 of the sweep in bfgs_sweep.json (all 8 seeds are tested there).
 Reference minimizer: scipy.optimize.minimize(method="BFGS", jac=analytic, options gtol=1e-10, maxiter=10000)
 (max-norm of the gradient, the same stopping test as the library); its nit, nfev (f calls) and njev
 (gradient calls) are stored for comparison.
@@ -91,3 +90,20 @@ write("bfgs", "library/tests/generators/bfgs.py",
       cases)
 for k, c in cases.items():
     print(k, c["scipy"])
+
+# Seed sweep for the curvature-threshold test: the same ill-conditioned 8-D quadratic family as
+# quadratic8_cond1e3 for 8 seeds (SEED + 1 ... SEED + 8). No SciPy reference is needed: the exact
+# minimizer is numpy.linalg.solve.
+sweep = {}
+for off in range(1, 9):
+    r = np.random.RandomState(SEED + off)
+    Qs, _ = np.linalg.qr(r.randn(8, 8))
+    As = np.round(Qs @ np.diag(np.logspace(0, 3, 8)) @ Qs.T, 6)
+    As = 0.5 * (As + As.T)
+    bs = np.round(r.randn(8), 6)
+    sweep[f"seed_plus_{off}"] = {"A": As.ravel().tolist(), "b": bs.tolist(),
+                                 "x_exact": np.linalg.solve(As, bs).tolist()}
+write("bfgs_sweep", "library/tests/generators/bfgs.py",
+      {"seed": SEED, "offsets": "1..8", "rng": "numpy.random.RandomState", "gtol": GTOL},
+      "Ill-conditioned 8-D quadratics f = x.A.x/2 - b.x (A row-major flat), eigenvalues logspace(0, 3, 8), "
+      "start at 0; x_exact = numpy.linalg.solve(A, b).", sweep)

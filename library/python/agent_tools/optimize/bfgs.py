@@ -22,6 +22,8 @@ Per iteration:
    returned and the step is not counted. (A rule on f not decreasing was tried and rejected: near
    convergence f stops changing in floating point well before max|g| reaches a tolerance like
    1e-10, and the run still converges.)
+   Also stop with "no progress" if max|g| reaches no new lowest value in STALL_ITERS = 20 consecutive
+   accepted steps (rounding-level wandering of x by a few ulps, which the first test misses).
 5. Update H unless the curvature s.y <= SY_MIN; accept the step.
 
 H starts as the identity (no scaling), so the first step has length |g|. Cost O(n^2) memory and
@@ -36,6 +38,9 @@ from dataclasses import dataclass
 import numpy as np
 
 C1 = 1e-4        # sufficient-decrease constant of the Armijo condition (dimensionless)
+APPROX_EPS = 1e-6  # relative tolerance on f of the approximate-Wolfe acceptance (dimensionless; Hager-Zhang 1e-6)
+SIGMA = 0.9       # approximate-Wolfe slope factor: g1.p >= SIGMA g.p (dimensionless; Hager-Zhang 0.9)
+STALL_ITERS = 20  # "no progress" if max|g| reaches no new lowest value in this many consecutive accepted steps
 MIN_STEP = 1e-10  # smallest accepted line-search step length (dimensionless)
 SY_MIN = 1e-12   # H update skipped if s.y <= SY_MIN; absolute, in (units of x)*(units of g)
 
@@ -129,6 +134,7 @@ def bfgs(fg, x0, options=None):
         return [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
 
     H = eye()                                                  # inverse-Hessian estimate
+    best_gn, since_best = gn, 0
     while True:
         if gn < opt.gtol:
             return BfgsResult(np.array(z), f, gn, True,
@@ -149,6 +155,15 @@ def bfgs(fg, x0, options=None):
             nfev += 1
             if f1 <= f + C1 * a * gp:
                 break
+            # Approximate Wolfe acceptance (Hager & Zhang 2005, eq. 4.1), for the noise regime: f is flat to
+            # rounding near the minimum, so the Armijo test can reject every step although the gradient shrinks.
+            # Accept if f1 <= f + APPROX_EPS |f| and the slope along d is between SIGMA g.p (negative) and
+            # (2 C1 - 1) g.p (about -g.p), i.e. the slope did not grow in size, and max|g| decreased (so the noise
+            # regime cannot wander: every such step lowers max|g|).
+            if np.isfinite(f1) and f1 <= f + APPROX_EPS * abs(f) and _max_norm(grad) < gn:
+                dg = _dot(grad.tolist(), d)
+                if SIGMA * gp <= dg <= (2.0 * C1 - 1.0) * gp:
+                    break
             a *= 0.5
             if a < MIN_STEP:
                 return BfgsResult(np.array(z), f, gn, False,
@@ -172,3 +187,11 @@ def bfgs(fg, x0, options=None):
         nit += 1
         if not np.isfinite(gn):
             return BfgsResult(np.array(z), f, gn, False, "non-finite gradient at an accepted point", nit, nfev)
+        if gn < best_gn:
+            best_gn, since_best = gn, 0
+        else:
+            since_best += 1
+            if since_best >= STALL_ITERS:
+                return BfgsResult(np.array(z), f, gn, False,
+                                  f"no progress: max|grad| not below {best_gn:e} in {STALL_ITERS} steps "
+                                  "(gtol below attainable accuracy?)", nit, nfev)

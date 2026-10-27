@@ -122,6 +122,44 @@ def test_stall_stops_when_gtol_is_below_rounding():
     assert np.max(np.abs(r.x - c["x_exact"])) < 1e-9 and r.grad_norm < 1e-9   # the best point is still returned
 
 
+def _quad_np(A, b):
+    A, b = np.array(A).reshape(len(b), len(b)), np.array(b)
+
+    def fg(x, g):
+        g[:] = A @ x - b
+        return float(0.5 * x @ A @ x - b @ x)
+    return fg
+
+
+def _quad_loop(A, b):
+    n = len(b)
+
+    def fg(x, g):
+        f = 0.0
+        for i in range(n):
+            ax = 0.0
+            for j in range(n):
+                ax += A[i * n + j] * x[j]
+            g[i] = ax - b[i]
+            f += 0.5 * x[i] * ax - b[i] * x[i]
+        return f
+    return fg
+
+
+def test_ill_conditioned_quadratics_converge_on_all_seeds():
+    # 8 seeds, eigenvalues 1 to 1e3, gtol 1e-10, objective summed in NumPy order and in plain-loop order.
+    # With the old absolute threshold s.y <= 1e-12 half of the runs stalled near max|g| = 1e-8.
+    stats = []
+    for name, c in load_reference("bfgs_sweep")["cases"].items():
+        for kind, make in (("numpy", _quad_np), ("loop", _quad_loop)):
+            r = bfgs(make(c["A"], c["b"]), [0.0] * 8, BfgsOptions(max_iter=1000, gtol=GTOL))
+            assert r.success, (name, kind, r.message)
+            assert np.max(np.abs(r.x - c["x_exact"])) < 1e-8, (name, kind)
+            stats.append((r.nit, r.nfev))
+    print(f"VERIFY bfgs py_seed_sweep runs={len(stats)} all_converged=1 nit={min(s[0] for s in stats)}..{max(s[0] for s in stats)} "
+          f"nfev={min(s[1] for s in stats)}..{max(s[1] for s in stats)}")
+
+
 def test_invalid_options_fail_immediately():
     calls = []
 

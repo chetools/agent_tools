@@ -169,3 +169,45 @@ fn invalid_options_fail_immediately() {
     assert_eq!(calls, 0);
     println!("VERIFY bfgs rust_invalid_options gtol_not_positive_finite,max_iter_zero=fail_with_nfev_0");
 }
+
+#[test]
+fn ill_conditioned_quadratics_converge_on_all_seeds() {
+    // 8 seeds, eigenvalues 1 to 1e3, gtol 1e-10, objective summed with iterator sums and with plain loops.
+    // With the old absolute threshold s.y <= 1e-12 half of the runs stalled near max|g| = 1e-8.
+    let p = format!("{}/../tests/reference_data/bfgs_sweep.json", env!("CARGO_MANIFEST_DIR"));
+    let r: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap();
+    let (mut nit, mut nfev) = ((usize::MAX, 0usize), (usize::MAX, 0usize));
+    for (name, c) in r["cases"].as_object().unwrap() {
+        let (a, b, xe) = (vec(&c["A"]), vec(&c["b"]), vec(&c["x_exact"]));
+        let n = b.len();
+        for kind in ["iter_sum", "loop"] {
+            let (a, b) = (a.clone(), b.clone());
+            let res = bfgs(
+                move |x: &[f64], g: &mut [f64]| {
+                    let mut f = 0.0;
+                    for i in 0..n {
+                        let ax: f64 = if kind == "iter_sum" {
+                            (0..n).map(|j| a[i * n + j] * x[j]).sum()
+                        } else {
+                            let mut s = 0.0;
+                            for j in 0..n {
+                                s += a[i * n + j] * x[j];
+                            }
+                            s
+                        };
+                        g[i] = ax - b[i];
+                        f += 0.5 * x[i] * ax - b[i] * x[i];
+                    }
+                    f
+                },
+                &[0.0; 8],
+                &BfgsOptions { max_iter: 1000, gtol: GTOL },
+            );
+            assert!(res.success, "{name} {kind}: {}", res.message);
+            assert!(maxdiff(&res.x, &xe) < 1e-8, "{name} {kind}");
+            nit = (nit.0.min(res.nit), nit.1.max(res.nit));
+            nfev = (nfev.0.min(res.nfev), nfev.1.max(res.nfev));
+        }
+    }
+    println!("VERIFY bfgs rust_seed_sweep runs=16 all_converged=1 nit={}..{} nfev={}..{}", nit.0, nit.1, nfev.0, nfev.1);
+}
