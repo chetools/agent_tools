@@ -50,3 +50,8 @@ Event detection (zero crossings) and dense output are features of the integrator
 ## Supporting linear algebra
 
 Implicit integrators and Newton-type solvers need dense LU with partial pivoting. Radau IIA additionally needs the complex LU used for its transformed system. Small-system linear algebra is kept in the crate rather than added as an external dependency.
+
+| Situation | Routine | SciPy / NumPy equivalent | Notes |
+|---|---|---|---|
+| Small dense general system `A x = b` (Newton steps, implicit integrators); also with `Dual` entries for sensitivities | `lu_dense` | `scipy.linalg.lu_factor` / `lu_solve`, `numpy.linalg.solve` | Partial pivoting on values. Reports exact zero or non-finite pivots only; check the residual for near-singular systems. Generic over `Real`. |
+| Symmetric positive definite system, Gaussian-process covariances, SPD test | `cholesky` (+ `solve_lower`, `solve_upper_t`, `cholesky_solve`) | `numpy.linalg.cholesky`, `scipy.linalg.cho_solve` | Fails (`success = false`) on non-SPD input, which doubles as an SPD test. f64 only. About half the cost of LU. |

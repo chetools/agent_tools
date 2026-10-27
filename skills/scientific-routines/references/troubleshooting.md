@@ -40,3 +40,29 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Converges slowly along a curved valley | Poor scaling or conditioning | Rescale variables; use a quasi-Newton method. |
 | Different runs end at different points | Multiple local minima | Multi-start, or a global method, chosen deliberately. |
 | Constraints violated at the end | Infeasible start or loose constraint tolerance | Start from a feasible point; tighten the constraint tolerance. |
+
+## Automatic differentiation (`dual`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Derivative NaN or infinite (Rust), or `ZeroDivisionError`/`ValueError` (Python) | Evaluation at `sqrt(0)`, `ln(0)` or a zero denominator | Move the point; the function is singular there. |
+| AD derivative disagrees with finite differences by about 1e-6 | Finite-difference step too large or too small | Use central differences, h about 1e-5 for second derivatives; check against an analytic form. |
+| Derivative of `abs` or a branch has the wrong sign near a kink | The derivative follows the branch taken; at exactly 0 `abs` uses the right-hand derivative | Avoid evaluating at the kink. |
+| Second derivative is 0 or wrong | Single `Dual<f64>` used | Nest: `Dual<Dual<f64>>` with seeds `Dual::new(Dual::new(x, 1.0), Dual::new(1.0, 0.0))`. |
+
+## Linear algebra (`lu_dense`, `cholesky`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `lu_dense` reports singular | Exact zero pivot (rank deficiency, a zero row or column) | Check the matrix construction; rescale. |
+| `lu_dense` succeeds but the solution is huge or the residual is large | Nearly singular matrix (not detected) | Compute the residual `A x - b`; estimate the condition number; expect a relative error up to about `eps * cond`. |
+| `cholesky` fails with "not positive definite" | Matrix is not SPD, or only semidefinite, or too ill-conditioned in f64 | Check symmetry and eigenvalues; add a small diagonal jitter (for Gaussian-process covariances, a nugget) deliberately. |
+| `cholesky` result differs from NumPy at the 1e-10 level | Ill-conditioned matrix (for example Hilbert n = 10): errors scale with `eps * cond` | Expected; compare the residual `L L^T - A` instead. |
+
+## Random numbers (`splitmix64`, `mulberry32`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
+| Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
+| Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
