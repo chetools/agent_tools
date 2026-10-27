@@ -1,1 +1,1 @@
-"""Statistics and design of experiments."""
+"""Statistics, regression and design of experiments."""
