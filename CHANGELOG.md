@@ -12,3 +12,4 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `cholesky` 0.1.0 (experimental, `linalg`): Cholesky factorization and triangular solves.
 - `splitmix64` 0.1.0 (experimental, `random`): SplitMix64 with uniform, normal and shuffle.
 - `mulberry32` 0.1.0 (experimental, `random`): Mulberry32, bit-identical to the JavaScript version.
+- `porous_permeability` 0.1.0 (experimental, `properties`; area guide added): Kozeny-Carman, Ergun, Gebart (square, hexagonal), Sangani-Acrivos square-array permeability correlations; NaN outside the domain.

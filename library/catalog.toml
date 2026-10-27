@@ -144,3 +144,23 @@ verified_rtol = [0, 0]
 tests = ["streams_bit_identical_vs_node","statistics_1e5","python_vs_rust"]
 source = "Tommy Ettinger, mulberry32 (public domain, 2017); ported from chetools/claude heat-exchanger-network"
 notes = "Outputs equal the JavaScript Math.imul version exactly (checked in node, 5 seeds x 20 values). Period 2^32, modest statistical quality. below(n) is next_u32 % n (slightly biased). JavaScript source is in the generator script tests/generators/mulberry32.py."
+
+[[routine]]
+id = "porous_permeability"
+name = "Porous-media permeability and pressure-drop correlations (Kozeny-Carman, Ergun, Gebart, Sangani-Acrivos)"
+area = "properties"
+problem_class = "property_correlation"
+suitable_for = ["packed_bed_pressure_drop","permeability_of_granular_beds","transverse_permeability_of_cylinder_arrays","kozeny_constant_from_measurement"]
+equivalent = "none (closed-form correlations)"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/properties/porous_permeability.rs"
+python = "library/python/agent_tools/properties/porous_permeability.py"
+example = "library/examples/rust/porous_permeability.rs"
+example_python = "library/examples/python/porous_permeability.py"
+features = ["kozeny_carman","fit_kozeny_constant","ergun_gradient","gebart_square","gebart_hexagonal","sangani_acrivos_square","nan_outside_domain"]
+units = "SI: eps dimensionless; d, 1/a_s in m; k in m^2; U in m/s; mu in Pa s; rho in kg/m^3; -dp/dx in Pa/m"
+verified_rtol = [3.7e-16, 4.8e-16]
+tests = ["formulas_vs_independently_reimplemented_reference","dilute_sangani_acrivos_vs_hasimoto","gebart_asymptote_near_close_packing","ergun_laminar_turbulent_limits","kozeny_carman_equals_blake_kozeny_ergun_viscous","fit_kozeny_constant_vs_scipy_curve_fit","nan_outside_domain","python_vs_rust"]
+source = "Kozeny 1927 (Sitzungsber. Akad. Wiss. Wien IIa 136:271) / Carman 1937 (Trans. Inst. Chem. Eng. 15:150), K = 5; Ergun 1952 (Chem. Eng. Prog. 48(2):89), 150 and 1.75; Gebart 1992 (J. Compos. Mater. 26:1100); Sangani & Acrivos 1982 (Int. J. Multiphase Flow 8:193); Gebart and Sangani-Acrivos constants read from Table 1 of Yazdchi, Srivastava & Luding 2011 (Int. J. Multiphase Flow); ported from chetools/claude porous-media-lbm"
+notes = "One family entry: the five functions share conventions (SI units, NaN outside the mathematical domain, no clipping) and one file pair. Reference data are the published formulas re-implemented in a different algebraic form by the generator; no paper table values (none could be verified). Recommended ranges are documented, not enforced: Gebart is a close-packing lubrication model, Sangani-Acrivos a dilute series truncated at O(phi^4) (accuracy at large phi not verified), Ergun's data range not verified. fit_kozeny_constant is an exact per-measurement inversion, not a least-squares fit. Changes from the source: kozeny_carman takes a_s explicitly (the source defaulted to the 2D disk value 4/d) and gebart_hexagonal was added; out-of-domain inputs give NaN."

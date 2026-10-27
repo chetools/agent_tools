@@ -66,3 +66,11 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Rust and Python (or JavaScript) streams differ | Different constructor or seed (SplitMix64 `new` vs `from_seed_stream`; Mulberry32 seed masked to 32 bits), or a different number of draws consumed | See `areas/random.md`; compare the first outputs against `reference_data/`. |
 | Normals differ in the last digits between languages | libm rounding in `ln` and `cos` | Expected, about 1e-15 relative; integer outputs and uniforms are exact. |
 | Visible pattern or poor quality in a large Monte Carlo run with Mulberry32 | 32-bit state, modest quality | Use SplitMix64. |
+
+## Porous-media correlations (`porous_permeability`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Result is NaN | An input is outside the domain: porosity not in (0,1), solid fraction above close packing (pi/4 square, 0.9069 hexagonal), negative velocity, non-positive diameter or `a_s` | Check units (diameter in m, not mm or radius) and the porosity/solid-fraction convention (eps = 1 - phi). |
+| Kozeny-Carman permeability off by a factor of order 1-10 | `a_s` taken per bed volume, wrong shape factor (6/d spheres, 4/d cylinders), or K not matched to the bed | Use surface per solid volume; fit K with `fit_kozeny_constant`. |
+| Gebart far from data at low solid fraction, or Sangani-Acrivos far at high | Outside the recommended range (Gebart: close packing; S-A: dilute) | Choose the correlation for the regime; compare both near phi 0.3-0.5 and treat the gap as uncertainty. |
