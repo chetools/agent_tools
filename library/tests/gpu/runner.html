@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>GPU routine test</title>
+<pre id="out">running…</pre>
+<script type="module">
+// Runs library/tests/gpu/<id>.test.js against library/tests/reference_data/gpu/<id>.json.
+// URL: runner.html?test=<id>.   Sets window.RESULT = { id, rows: [{ name, err, tol, pass }], done } or { error }.
+import { getDevice } from "../../js/gpu_util.js";
+const id = new URLSearchParams(location.search).get("test");
+const out = document.getElementById("out");
+try {
+  if (!id || !/^[a-z0-9_]+$/.test(id)) throw new Error("missing or invalid ?test=<id>");
+  const r = await fetch(`../reference_data/gpu/${id}.json`);
+  if (!r.ok) throw new Error(`reference data for ${id}: HTTP ${r.status}`);
+  const ref = await r.json();
+  const { device } = await getDevice();
+  let lost = null;
+  device.lost.then(info => { lost = info.message; });
+  const mod = await import(`./${id}.test.js`);
+  const rows = await mod.run(device, ref);
+  if (lost) throw new Error("device lost: " + lost);
+  if (!Array.isArray(rows) || rows.length === 0) throw new Error("test returned no rows");
+  for (const row of rows)
+    if (typeof row.pass !== "boolean" || !row.name) throw new Error("malformed row " + JSON.stringify(row));
+  window.RESULT = { id, rows, done: true };
+  out.textContent = JSON.stringify(window.RESULT, null, 1);
+} catch (e) {
+  window.RESULT = { id, error: String(e && e.stack || e) };
+  out.textContent = window.RESULT.error;
+}
+</script>
