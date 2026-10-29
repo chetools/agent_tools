@@ -162,3 +162,24 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Fixed variable (`lo == hi`) has a multiplier of either sign | Its bound is an equality, so the sign is not restricted | `active` gives the side of the sign of `q`, the multiplier is `|q|`. |
 | Result differs from SciPy L-BFGS-B at the 1e-6 to 1e-5 level when `cond(H)` is large | SciPy's accuracy, not the routine's: at `cond(H) = 1e8` L-BFGS-B was off by 5e-6 against the exact rational solution, the routine by 3e-13 | Compare KKT residuals, not `x`. |
 | Solutions of a free variable shift in the 8th digit with `cond(H) = 1e8` | `x` is determined only to about `cond eps |x|` by any f64 solve | Expected; the stationarity residual stays at rounding level. |
+
+## ODE integrators (`dopri5`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `nsteps` grows like the stiffness (for example 6074 steps for `y' = -1e4 (y - cos t)` at rtol 1e-6) although the solution is smooth | Stiffness: the explicit stability limit, not accuracy, sets the step | Use `rosenbrock23` or a Radau/BDF solver; loosening rtol does not help. |
+| Failure "step size underflow" or "max_steps" | Finite-time blow-up, a discontinuity, `f` returning NaN, or a stiff problem with a small `max_steps` | Check `f` for NaN/inf, shorten the span before a singularity, raise `max_steps` only for a stiff or long run. |
+| Failure "automatic first step is not a positive finite number" | `atol = 0` with a zero component in `y0`, or `f(t0, y0)` is not finite | Give a positive `atol`, or pass `h0`. |
+| Final error is 100 to 10000 times larger than rtol on an orbit | Local, not global, error control; periodic orbits do not damp errors | Request a smaller rtol (try 1e-9 for Arenstorf-type orbits) and compare with a tighter run. |
+| A component near zero is badly resolved | `atol` is too loose for it (the scale is `atol + rtol * abs(y)`) | Pass `atol_vec` with a small entry for that component. |
+| Step sequence differs from SciPy `RK45` in the last digits | Summation order differs, and the controller feeds the round-off back | Expected: step counts and `nfev` are equal, times agree to about 1e-8 on the tested cases. |
+
+## Step Jacobian of a fixed-step method (`rk4_step_jacobian`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `phi` differs from finite differences of the step by far more than 1e-6 | `jac` is not the derivative of `f` (or is evaluated at different arguments) | Check `jac` against central differences of `f` first; `phi` is only as exact as `jac`. |
+| `phi` differs from the flow sensitivity matrix `dy(T)/dy(0)` | Expected: `phi` is the derivative of the discrete map, which differs from the flow's by the truncation error | Use more substeps (`n_sub`); the difference falls like `(h / n_sub)^4`. |
+| `y1` and `phi` are huge or NaN | Explicit RK4 is unstable when `h * lambda` is outside its stability region (about -2.78 on the real axis), e.g. a stiff or ignited reactor | Increase `n_sub`, or use a stiff integrator (`rosenbrock23`). |
+| `Dual` derivatives are wrong or zero | `jac` returns plain floats while the state is `Dual` (the Jacobian is then wrong), or no input was seeded | Build `f` and `jac` from the same generic code; seed one `Dual` derivative per column with `rk4_step`. |
+| Result says success = false | `n = 0`, `n_sub = 0` or non-finite `t0` or `h` | Fix the arguments. |

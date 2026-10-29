@@ -27,3 +27,5 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `rosenbrock23` 0.1.0 (experimental, `ode`): adaptive Rosenbrock 2(3) (ode23s) stiff integrator generic over `Real`, with optional `df/dt`, per-component `atol`, dual-aware step control, and stored `t, y, dy/dt`.
 - `block_tridiagonal` 0.1.0 (experimental, `linalg`): block-tridiagonal LU (block Thomas), runtime block size, factor once and solve many, generic over `Real`.
 - `qp_box` 0.1.0 (experimental, `optimize`): box-constrained convex QP by the primal active-set method (Nocedal & Wright Alg. 16.3), using `cholesky`; returns x, objective, active set, multipliers, nit, nfact.
+- `dopri5` 0.1.0 (experimental, `ode`): adaptive Dormand-Prince 5(4) explicit integrator for any `n` with SciPy `RK45`'s starting step and step controller (step counts match SciPy), per-component `atol`, `h0`, `hmax`, `max_steps`, failures reported in the result.
+- `rk4_step_jacobian` 0.1.0 (experimental, `ode`): classical RK4 step (any n, `n_sub` substeps) with its exact step Jacobian `d y1 / d y0` propagated through the stages from a user Jacobian, plus a state-only `rk4_step`; generic over `Real`.
