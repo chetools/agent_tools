@@ -28,7 +28,9 @@
 //!    pass takes `p = 0` without a new solve and goes straight to the multiplier test of step 2.
 //!
 //! In exact arithmetic the method terminates finitely when no blocking step has length zero; the pass count is
-//! capped at `max_iter` (default `4 n`) to guard against cycling in degenerate cases and against rounding.
+//! capped at `max_iter` (default `max(50, 20 n)`) as a safety net against rounding and unforeseen cycling. The cap
+//! is not a theoretical bound: releases count as passes, and well-conditioned nondegenerate problems were found
+//! that need about `5 n` passes (see `default_cap_reproducers`); the random test problems needed at most 85 at n = 124.
 //!
 //! Changes from the muse source (each is a test in `tests/qp_box.rs`):
 //! - the diagonal shift `1e-10 max(1, max H_ii)` applied when `H` fails Cholesky is specific to its caller and is
@@ -62,7 +64,7 @@ pub const TOL_DUAL: f64 = 1e-9;
 /// Options of [`qp_box`].
 #[derive(Clone, Debug)]
 pub struct QpBoxOptions {
-    /// Cap on active-set iterations (passes); `None` means `4 n` (the source's cap). Must be >= 1 if given.
+    /// Cap on active-set iterations (passes); `None` means `max(50, 20 n)` (the source's `4 n` was too small). Must be >= 1 if given.
     pub max_iter: Option<usize>,
     /// The free-set subproblem counts as solved when `max|p| <= tol_step` (units of x, absolute).
     /// Default 1e-10. Finite and >= 0.
@@ -137,7 +139,7 @@ fn active_of(at_lo: &[bool], at_hi: &[bool]) -> Vec<i8> {
 /// input is reported in the result. See the module docs for the algorithm, defaults and failure modes.
 pub fn qp_box(h: &[f64], g: &[f64], lo: &[f64], hi: &[f64], opt: &QpBoxOptions) -> QpBoxResult {
     let n = g.len();
-    let max_iter = opt.max_iter.unwrap_or(4 * n);
+    let max_iter = opt.max_iter.unwrap_or(50.max(20 * n));
     let fail = |msg: String, x: Vec<f64>, nit: usize, nfact: usize, active: Vec<i8>| -> QpBoxResult {
         let f = if nfact == 0 && nit == 0 { f64::NAN } else { objective(h, g, &x) };
         QpBoxResult { x, f, active, multipliers: vec![0.0; n], success: false, message: msg, nit, nfact }

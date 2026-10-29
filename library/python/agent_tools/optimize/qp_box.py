@@ -28,8 +28,9 @@ Algorithm (one pass of the loop = one iteration `nit`; exactly the steps of the 
    construction, so the next pass takes p = 0 without a new solve and goes straight to the multiplier test of step 2.
 
 In exact arithmetic the method terminates finitely when no blocking step has length zero; the pass count is
-capped at max_iter (default 4 n) to guard against cycling in degenerate cases and against rounding (a standard
-result for nondegenerate problems; no test case needed more than 85 iterations at n = 124).
+capped at max_iter (default max(50, 20 n)) as a safety net against rounding and unforeseen cycling. The cap is
+not a theoretical bound: releases count as passes, and well-conditioned nondegenerate problems were found that
+need about 5 n passes (see test_default_cap_reproducers); the random test problems needed at most 85 at n = 124.
 
 Changes from the muse source (each is a test below):
 - the diagonal shift 1e-10 * max(1, max H_ii) applied when H fails Cholesky is specific to its caller and is NOT
@@ -68,7 +69,8 @@ TOL_DUAL = 1e-9    # default tol_dual (units of f / x, absolute)
 class QpBoxOptions:
     """Options of `qp_box`.
 
-    max_iter: cap on active-set iterations (passes); None means 4 n (the source's cap). Must be >= 1 if given.
+    max_iter: cap on active-set iterations (passes); None means max(50, 20 n) (the source's 4 n was too small). Must be >= 1
+    if given.
     tol_step: the free-set subproblem counts as solved when max|p| <= tol_step, units of x, absolute (default 1e-10).
     tol_dual: a bound is released only if its multiplier is below -tol_dual, units of f / x, absolute (default 1e-9).
     Both tolerances must be finite and >= 0.
@@ -138,7 +140,7 @@ def qp_box(h, g, lo, hi, options=None):
     lo = np.array(lo, dtype=float)
     hi = np.array(hi, dtype=float)
     n = len(g)
-    max_iter = 4 * n if opt.max_iter is None else opt.max_iter
+    max_iter = max(50, 20 * n) if opt.max_iter is None else opt.max_iter
 
     def fail(msg, x=None, nit=0, nfact=0, active=None, mult=None):
         x = np.zeros(n) if x is None else x

@@ -320,7 +320,7 @@ fn random_problems_up_to_n50_certificate() {
             let p = Problem { n, h, g, lo, hi };
             let r = solve(&p);
             let c = check_certificate(&p, &r, &format!("n{n}_spread{spread}"));
-            assert!(r.nit <= 4 * n);
+            assert!(r.nit <= 50.max(20 * n));
             worst = worst.max(c.stat);
             if n == 50 {
                 nit50.push(r.nit);
@@ -329,6 +329,29 @@ fn random_problems_up_to_n50_certificate() {
         }
     }
     println!("VERIFY qp_box rust_random_n50 problems={count} all_kkt_ok=1 max_kkt_stat={worst:.1e} nit_at_n50={nit50:?}");
+}
+
+// (n, H row-major, g, hi) with lo = 0: nondegenerate, well-conditioned, found by hill climbing on the pass count
+const CAP_REPRODUCERS: [(usize, &[f64], &[f64], f64); 3] = [
+    (3, &[1.0472399095265337, 0.9421865156436513, -1.5521828673786728, 0.9421865156436513, 1.179456712389007, -1.4812687162226472, -1.5521828673786728, -1.4812687162226472, 2.8891061401248], &[-0.2768828882302678, -0.4946297289368097, -0.4182782400244921], 1.602283819497114),
+    (4, &[1.3802835278185264, -0.7516270309602238, -0.21645844042208112, -0.4591834757852036, -0.7516270309602238, 1.1844470243729093, 0.8437979841461524, 0.6266504515422855, -0.21645844042208112, 0.8437979841461524, 4.03710395165706, -0.9178952259079698, -0.4591834757852036, 0.6266504515422855, -0.9178952259079698, 1.3951420125652543], &[-0.4292886726390505, -1.4503185691175424, 0.31810988987637895, -1.9702710108575923], 1.579564953358756),
+    (5, &[0.8868805615949854, -0.14703752442530216, -0.2680469265695435, -0.1016354121942829, -0.4192624030048251, -0.14703752442530216, 0.9936361398860136, 0.5205418672786014, -0.12310454567891946, -1.084242870466544, -0.2680469265695435, 0.5205418672786014, 1.2024044824646984, 0.5703495039483478, -0.8522460281354195, -0.1016354121942829, -0.12310454567891946, 0.5703495039483478, 1.6003587461216677, 0.23891391513417226, -0.4192624030048251, -1.084242870466544, -0.8522460281354195, 0.23891391513417226, 1.9895783536657685], &[-0.10766510778311858, -0.3708280984436486, -0.8334775274509005, -0.9713629640398181, -0.10279924143925213], 1.618494052698689),
+];
+
+#[test]
+fn default_cap_reproducers() {
+    // PR review: the old default cap 4 n failed on these ordinary problems (releases count as passes)
+    let mut out = Vec::new();
+    for (n, h, g, hi) in CAP_REPRODUCERS {
+        let p = Problem { n, h: h.to_vec(), g: g.to_vec(), lo: vec![0.0; n], hi: vec![hi; n] };
+        let r = solve(&p);
+        assert!(r.success && r.nit > 4 * n && r.nit <= 50.max(20 * n), "n={n} nit={}", r.nit);
+        let c = check_certificate(&p, &r, &format!("cap_n{n}"));
+        let capped = qp_box(&p.h, &p.g, &p.lo, &p.hi, &QpBoxOptions { max_iter: Some(4 * n), ..QpBoxOptions::default() });
+        assert!(!capped.success);
+        out.push((n, r.nit, c.stat));
+    }
+    println!("VERIFY qp_box rust_default_cap_reproducers (n,nit,kkt_stat)={out:?} old_cap=4n_fails=ok");
 }
 
 #[test]

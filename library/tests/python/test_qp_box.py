@@ -257,7 +257,7 @@ def test_random_problems_up_to_n50_certificate():
             lo, hi = -rng.uniform(0.05, 1, n), rng.uniform(0.05, 1, n)
             r = qp_box(H, g, lo, hi)
             c = check_certificate(H, g, lo, hi, r, f"n{n}_cond{cond}")
-            assert r.nit <= 4 * n
+            assert r.nit <= max(50, 20 * n)
             worst = max(worst, c["stat"])
             nits.append((n, r.nit))
             count += 1
@@ -280,6 +280,28 @@ def test_muse_fixture():
     print(f"VERIFY qp_box py_muse_fixture cases={len(cases)} max_abs_dev_vs_scipy={worst:.2e} max_nit={nit_max} "
           f"nit_n124={[qp_box(*problem(c)).nit for k, c in cases.items() if c['n'] == 124]}")
     assert len(cases) == 26
+
+
+CAP_REPRODUCERS = [  # (n, H, g, hi) with lo = 0: nondegenerate, well-conditioned, found by hill climbing on the pass count
+    (3, [[1.0472399095265337, 0.9421865156436513, -1.5521828673786728], [0.9421865156436513, 1.179456712389007, -1.4812687162226472], [-1.5521828673786728, -1.4812687162226472, 2.8891061401248]], [-0.2768828882302678, -0.4946297289368097, -0.4182782400244921], 1.602283819497114),
+    (4, [[1.3802835278185264, -0.7516270309602238, -0.21645844042208112, -0.4591834757852036], [-0.7516270309602238, 1.1844470243729093, 0.8437979841461524, 0.6266504515422855], [-0.21645844042208112, 0.8437979841461524, 4.03710395165706, -0.9178952259079698], [-0.4591834757852036, 0.6266504515422855, -0.9178952259079698, 1.3951420125652543]], [-0.4292886726390505, -1.4503185691175424, 0.31810988987637895, -1.9702710108575923], 1.579564953358756),
+    (5, [[0.8868805615949854, -0.14703752442530216, -0.2680469265695435, -0.1016354121942829, -0.4192624030048251], [-0.14703752442530216, 0.9936361398860136, 0.5205418672786014, -0.12310454567891946, -1.084242870466544], [-0.2680469265695435, 0.5205418672786014, 1.2024044824646984, 0.5703495039483478, -0.8522460281354195], [-0.1016354121942829, -0.12310454567891946, 0.5703495039483478, 1.6003587461216677, 0.23891391513417226], [-0.4192624030048251, -1.084242870466544, -0.8522460281354195, 0.23891391513417226, 1.9895783536657685]], [-0.10766510778311858, -0.3708280984436486, -0.8334775274509005, -0.9713629640398181, -0.10279924143925213], 1.618494052698689),
+]
+
+
+def test_default_cap_reproducers():
+    # PR review: the old default cap 4 n failed on these ordinary problems (releases count as passes)
+    out = []
+    for n, H, g, hi in CAP_REPRODUCERS:
+        H, g, lo, hi = np.array(H), np.array(g), np.zeros(n), np.full(n, hi)
+        r = qp_box(H, g, lo, hi)
+        assert r.success and r.nit > 4 * n and r.nit <= max(50, 20 * n), (n, r.nit)
+        c = check_certificate(H, g, lo, hi, r, f"cap_n{n}")
+        assert not qp_box(H, g, lo, hi, QpBoxOptions(max_iter=4 * n)).success
+        out.append((n, r.nit, c["stat"]))
+    x3 = qp_box(np.array(CAP_REPRODUCERS[0][1]), np.array(CAP_REPRODUCERS[0][2]), np.zeros(3), np.full(3, CAP_REPRODUCERS[0][3])).x
+    assert np.max(np.abs(x3 - np.linalg.solve(np.array(CAP_REPRODUCERS[0][1]), -np.array(CAP_REPRODUCERS[0][2])))) < 1e-12
+    print(f"VERIFY qp_box py_default_cap_reproducers (n,nit,kkt_stat)={[(n, k, float(f'{s:.1e}')) for n, k, s in out]} old_cap=4n_fails=ok")
 
 
 def test_failures_and_options():
