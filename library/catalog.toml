@@ -408,3 +408,23 @@ verified_rtol = [1e-14, 1e-12]
 tests = ["block_dominant_m_nb_1_5_2_50_3_200_5_40","scalar_vs_classical_thomas","weak_dominance_laplacian","zero_diagonal_blocks_in_block_pivoting","singular_first_block_reported","dual_solution_derivative","python_vs_rust"]
 source = "Golub & Van Loan, Matrix Computations, 4th ed., Sec. 4.5.1; Press et al., Numerical Recipes, 3rd ed., Sec. 2.4; generalised from the 2x2 block solver of chetools/claude packed-bed-runaway"
 notes = "Blocks are row-major m*m in flat slices (lower[k]=block (k+1,k), upper[k]=block (k,k+1), nb-1 each). Pivoting only within diagonal blocks (lu_dense), none across blocks: needs block diagonal dominance, SPD or M-matrix structure. An exactly singular eliminated block fails with success=false even if the full matrix is nonsingular; a near-singular block is not detected, check `growth` (max ||C_i||_inf) and the residual. Uses LU solves instead of the source's explicit 2x2 inverses."
+
+[[routine]]
+id = "rk4_step_jacobian"
+name = "Classical RK4 step with exact step Jacobian dy1/dy0, generic over Real"
+area = "ode"
+problem_class = "fixed_step_ivp_with_step_jacobian"
+suitable_for = ["ekf_mhe_linearisation","sampled_data_models","exact_derivative_of_discrete_step","small_dense_systems"]
+equivalent = "none in SciPy (solve_ivp RK45 has no step Jacobian); the Jacobian equals a dual-number or complex-step derivative of the RK4 step"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/ode/rk4_step_jacobian.rs"
+python = "library/python/agent_tools/ode/rk4_step_jacobian.py"
+example = "library/examples/rust/rk4_step_jacobian.rs"
+example_python = "library/examples/python/rk4_step_jacobian.py"
+features = ["dense_jacobian_callback","n_sub_substeps","state_only_variant","generic_over_real","bit_identical_state_with_and_without_jacobian"]
+units = "t and h in the caller's units; y in the caller's units; phi dimensionless when components of y share units, else units of y_i/y_k"
+verified_rtol = []
+tests = ["linear_vs_taylor_polynomial","van_der_pol_mu5_and_lorenz_vs_complex_step_fd_dual","fourth_order_convergence_state_and_phi","cstr_parity_case","invalid_arguments","python_vs_rust"]
+source = "Hairer, Norsett & Wanner, Solving ODEs I, 2nd ed., sec. II.1 (classical RK4); ported from chetools/muse twin-cstr (model.rs rk4_step, twin_mhe.py _rk4_batch)"
+notes = "Phi is the derivative of the discrete step (matches complex-step, FD and Dual derivatives to 1e-16, 1e-11 and 1e-16), not the flow sensitivity matrix: they differ by the truncation error (CSTR case h = 1 s: 2.6e-6). Observed order 4.02 (state) and 4.02 (Phi) at 320 substeps on Van der Pol mu=1, T=2. Fixed step, no error control, explicit, so unstable on stiff problems at large h. Differences from the source: any n with closures f(t, y, dydt) and jac(t, y, J) (dense row-major) instead of a 4-state CSTR, the source system was autonomous (its t0 argument was a feed temperature, not a time), here stage times t + h/2 and t + h are passed to f, generic over Real, validation returned in the result. The source returns no parameter or control sensitivities, so none are offered. n_sub is the source's substep count and has no default (1 = single step)."
