@@ -26,3 +26,4 @@ All notable changes to the routines in this library. Versions follow semantic ve
 - `cubic_hermite` 0.1.0 (experimental, `interpolate`): piecewise cubic Hermite evaluator.
 - `rosenbrock23` 0.1.0 (experimental, `ode`): adaptive Rosenbrock 2(3) (ode23s) stiff integrator generic over `Real`, with optional `df/dt`, per-component `atol`, dual-aware step control, and stored `t, y, dy/dt`.
 - `block_tridiagonal` 0.1.0 (experimental, `linalg`): block-tridiagonal LU (block Thomas), runtime block size, factor once and solve many, generic over `Real`.
+- `dopri5` 0.1.0 (experimental, `ode`): adaptive Dormand-Prince 5(4) explicit integrator for any `n` with SciPy `RK45`'s starting step and step controller (step counts match SciPy), per-component `atol`, `h0`, `hmax`, `max_steps`, failures reported in the result.

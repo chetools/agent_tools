@@ -408,3 +408,23 @@ verified_rtol = [1e-14, 1e-12]
 tests = ["block_dominant_m_nb_1_5_2_50_3_200_5_40","scalar_vs_classical_thomas","weak_dominance_laplacian","zero_diagonal_blocks_in_block_pivoting","singular_first_block_reported","dual_solution_derivative","python_vs_rust"]
 source = "Golub & Van Loan, Matrix Computations, 4th ed., Sec. 4.5.1; Press et al., Numerical Recipes, 3rd ed., Sec. 2.4; generalised from the 2x2 block solver of chetools/claude packed-bed-runaway"
 notes = "Blocks are row-major m*m in flat slices (lower[k]=block (k+1,k), upper[k]=block (k,k+1), nb-1 each). Pivoting only within diagonal blocks (lu_dense), none across blocks: needs block diagonal dominance, SPD or M-matrix structure. An exactly singular eliminated block fails with success=false even if the full matrix is nonsingular; a near-singular block is not detected, check `growth` (max ||C_i||_inf) and the residual. Uses LU solves instead of the source's explicit 2x2 inverses."
+
+[[routine]]
+id = "dopri5"
+name = "Adaptive Dormand-Prince 5(4) explicit integrator (SciPy RK45), any n"
+area = "ode"
+problem_class = "nonstiff_ivp"
+suitable_for = ["nonstiff_systems_any_n","moderate_accuracy_rtol_1e-3_to_1e-9","smooth_trajectories","orbits_and_oscillators"]
+equivalent = "scipy.integrate.solve_ivp(method='RK45'); MATLAB ode45"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/ode/dopri5.rs"
+python = "library/python/agent_tools/ode/dopri5.py"
+example = "library/examples/rust/dopri5.rs"
+example_python = "library/examples/python/dopri5.py"
+features = ["f_t_y_dydt_closure","scipy_rk45_initial_step_and_controller","per_component_atol","h0_hmax_max_steps","first_same_as_last","failures_reported_not_raised","step_counts"]
+units = "t and y in the caller's units; rtol dimensionless; atol in units of y; h0, hmax in units of t"
+verified_rtol = [1e-3, 1e-9]
+tests = ["step_sequence_vs_scipy_rk45_5_problems_3_rtols","exact_oscillator_kepler_lotka_invariant","dop853_reference_arenstorf","stiffness_step_limitation","failures_reported","nan_rhs","python_vs_rust"]
+source = "Dormand & Prince, J. Comput. Appl. Math. 6(1), 1980; Hairer, Norsett & Wanner, Solving ODEs I, 2nd ed., Sec. II.4; ported from chetools/muse twin-cstr (solver/src/model.rs dopri5, python/cstr_model.py _solve_ivp)"
+notes = "Step counts and nfev equal SciPy RK45 (same rtol, atol, automatic first step) on all 15 tested problem/rtol cases (Arenstorf, Lotka-Volterra, Van der Pol mu=1, damped rotation, Kepler at rtol 1e-3, 1e-6, 1e-9), accepted step times agree to 5e-8 or better. f64 only (not generic over Real: no dual-number step control; use rosenbrock23 when AD through the steps is needed). Final error is 1.5 to 290 times rtol on the oscillator, Kepler and Lotka-Volterra cases and up to 8.6e3 times rtol on Arenstorf at 1e-6 (undamped orbit with close approaches). No dense output, t_eval or events; stores t, y at accepted steps only. Stiff problems: y' = -lam (y - cos t) to t = 2 at rtol 1e-6 takes 46, 164, 734, 6074 steps for lam = 1e1..1e4 (stability-limited). Differences from the source: SciPy controller constants (growth cap 10 not 5, shrink floor 0.2 not 0.1, no growth right after a rejection, accept if E < 1), SciPy starting-step rule (the source's max(d0,d1,d2) divided by zero for f(t0,y0)=0), failures returned instead of panic/raise, non-finite error estimate rejects the step, step underflow stop, per-component atol, h0/hmax options, stage times passed to f."

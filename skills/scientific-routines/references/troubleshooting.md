@@ -149,3 +149,14 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Failure "W = I - h d J is singular" | `1/(h d)` is an eigenvalue of `J`, or `J` has NaN | Check the Jacobian; the step is not shrunk automatically after this failure. |
 | Failure "step size underflow" | Finite-time blow-up, a discontinuity, or an inconsistent Jacobian | Check `f` and `jac` against each other by finite differences; shorten the span before a singularity. |
 | Achieved error is 10 to 100 times larger than rtol | Local, not global, error control (expected) | Request an rtol 10 to 100 times smaller than the accuracy you need; check against a tighter run. |
+
+## ODE integrators (`dopri5`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `nsteps` grows like the stiffness (for example 6074 steps for `y' = -1e4 (y - cos t)` at rtol 1e-6) although the solution is smooth | Stiffness: the explicit stability limit, not accuracy, sets the step | Use `rosenbrock23` or a Radau/BDF solver; loosening rtol does not help. |
+| Failure "step size underflow" or "max_steps" | Finite-time blow-up, a discontinuity, `f` returning NaN, or a stiff problem with a small `max_steps` | Check `f` for NaN/inf, shorten the span before a singularity, raise `max_steps` only for a stiff or long run. |
+| Failure "automatic first step is not a positive finite number" | `atol = 0` with a zero component in `y0`, or `f(t0, y0)` is not finite | Give a positive `atol`, or pass `h0`. |
+| Final error is 100 to 10000 times larger than rtol on an orbit | Local, not global, error control; periodic orbits do not damp errors | Request a smaller rtol (try 1e-9 for Arenstorf-type orbits) and compare with a tighter run. |
+| A component near zero is badly resolved | `atol` is too loose for it (the scale is `atol + rtol * abs(y)`) | Pass `atol_vec` with a small entry for that component. |
+| Step sequence differs from SciPy `RK45` in the last digits | Summation order differs, and the controller feeds the round-off back | Expected: step counts and `nfev` are equal, times agree to about 1e-8 on the tested cases. |
