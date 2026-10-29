@@ -160,3 +160,13 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Final error is 100 to 10000 times larger than rtol on an orbit | Local, not global, error control; periodic orbits do not damp errors | Request a smaller rtol (try 1e-9 for Arenstorf-type orbits) and compare with a tighter run. |
 | A component near zero is badly resolved | `atol` is too loose for it (the scale is `atol + rtol * abs(y)`) | Pass `atol_vec` with a small entry for that component. |
 | Step sequence differs from SciPy `RK45` in the last digits | Summation order differs, and the controller feeds the round-off back | Expected: step counts and `nfev` are equal, times agree to about 1e-8 on the tested cases. |
+
+## Step Jacobian of a fixed-step method (`rk4_step_jacobian`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `phi` differs from finite differences of the step by far more than 1e-6 | `jac` is not the derivative of `f` (or is evaluated at different arguments) | Check `jac` against central differences of `f` first; `phi` is only as exact as `jac`. |
+| `phi` differs from the flow sensitivity matrix `dy(T)/dy(0)` | Expected: `phi` is the derivative of the discrete map, which differs from the flow's by the truncation error | Use more substeps (`n_sub`); the difference falls like `(h / n_sub)^4`. |
+| `y1` and `phi` are huge or NaN | Explicit RK4 is unstable when `h * lambda` is outside its stability region (about -2.78 on the real axis), e.g. a stiff or ignited reactor | Increase `n_sub`, or use a stiff integrator (`rosenbrock23`). |
+| `Dual` derivatives are wrong or zero | `jac` returns plain floats while the state is `Dual` (the Jacobian is then wrong), or no input was seeded | Build `f` and `jac` from the same generic code; seed one `Dual` derivative per column with `rk4_step`. |
+| Result says success = false | `n = 0`, `n_sub = 0` or non-finite `t0` or `h` | Fix the arguments. |

@@ -428,3 +428,23 @@ verified_rtol = [1e-3, 1e-9]
 tests = ["step_sequence_vs_scipy_rk45_5_problems_3_rtols","exact_oscillator_kepler_lotka_invariant","dop853_reference_arenstorf","stiffness_step_limitation","failures_reported","nan_rhs","python_vs_rust"]
 source = "Dormand & Prince, J. Comput. Appl. Math. 6(1), 1980; Hairer, Norsett & Wanner, Solving ODEs I, 2nd ed., Sec. II.4; ported from chetools/muse twin-cstr (solver/src/model.rs dopri5, python/cstr_model.py _solve_ivp)"
 notes = "Step counts and nfev equal SciPy RK45 (same rtol, atol, automatic first step) on all 15 tested problem/rtol cases (Arenstorf, Lotka-Volterra, Van der Pol mu=1, damped rotation, Kepler at rtol 1e-3, 1e-6, 1e-9), accepted step times agree to 5e-8 or better on those cases; an independent review found the same step counts on four more problems (Brusselator, Lorenz, damped pendulum, time-dependent linear) with step times up to 3.4e-5 apart (Brusselator, rtol 1e-3), because round-off feeds back through the controller. Defaults rtol = 1e-6, atol = 1e-9 differ from SciPy's 1e-3, 1e-6: pass them explicitly when porting from solve_ivp. f64 only (not generic over Real: no dual-number step control; use rosenbrock23 when AD through the steps is needed). Final error is 1.5 to 290 times rtol on the oscillator, Kepler and Lotka-Volterra cases and up to 8.6e3 times rtol on Arenstorf at 1e-6 (undamped orbit with close approaches). No dense output, t_eval or events; stores t, y at accepted steps only. Stiff problems: y' = -lam (y - cos t) to t = 2 at rtol 1e-6 takes 46, 164, 734, 6074 steps for lam = 1e1..1e4 (stability-limited). Differences from the source: SciPy controller constants (growth cap 10 not 5, shrink floor 0.2 not 0.1, no growth right after a rejection, accept if E < 1), SciPy starting-step rule (the source's max(d0,d1,d2) divided by zero for f(t0,y0)=0), failures returned instead of panic/raise, non-finite error estimate rejects the step, step underflow stop, per-component atol, h0/hmax options, stage times passed to f."
+
+[[routine]]
+id = "rk4_step_jacobian"
+name = "Classical RK4 step with exact step Jacobian dy1/dy0, generic over Real"
+area = "ode"
+problem_class = "fixed_step_ivp_with_step_jacobian"
+suitable_for = ["ekf_mhe_linearisation","sampled_data_models","exact_derivative_of_discrete_step","small_dense_systems"]
+equivalent = "none in SciPy (solve_ivp RK45 has no step Jacobian); the Jacobian equals a dual-number or complex-step derivative of the RK4 step"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/ode/rk4_step_jacobian.rs"
+python = "library/python/agent_tools/ode/rk4_step_jacobian.py"
+example = "library/examples/rust/rk4_step_jacobian.rs"
+example_python = "library/examples/python/rk4_step_jacobian.py"
+features = ["dense_jacobian_callback","n_sub_substeps","state_only_variant","generic_over_real","bit_identical_state_with_and_without_jacobian"]
+units = "t and h in the caller's units; y in the caller's units; phi dimensionless when components of y share units, else units of y_i/y_k"
+verified_rtol = []
+tests = ["linear_vs_taylor_polynomial","van_der_pol_mu5_and_lorenz_vs_complex_step_fd_dual","fourth_order_convergence_state_and_phi","cstr_parity_case","invalid_arguments","python_vs_rust"]
+source = "Hairer, Norsett & Wanner, Solving ODEs I, 2nd ed., sec. II.1 (classical RK4); ported from chetools/muse twin-cstr (model.rs rk4_step, twin_mhe.py _rk4_batch)"
+notes = "Phi is the derivative of the discrete step (matches complex-step, FD and Dual derivatives to 1e-16, 1e-11 and 1e-16), not the flow sensitivity matrix: they differ by the truncation error (CSTR case h = 1 s: 2.6e-6). Observed order 4.02 (state) and 4.02 (Phi) at 320 substeps on Van der Pol mu=1, T=2. Fixed step, no error control, explicit, so unstable on stiff problems at large h. Differences from the source: any n with closures f(t, y, dydt) and jac(t, y, J) (dense row-major) instead of a 4-state CSTR, the source system was autonomous (its t0 argument was a feed temperature, not a time), here stage times t + h/2 and t + h are passed to f, generic over Real, validation returned in the result. The source returns no parameter or control sensitivities, so none are offered. n_sub is the source's substep count and has no default (1 = single step)."
