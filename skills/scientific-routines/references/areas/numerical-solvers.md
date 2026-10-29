@@ -54,6 +54,7 @@ Event detection (zero crossings) and dense output are features of the integrator
 | Equality and inequality constraints | SQP | `SLSQP` | Needs gradients of objective and constraints. |
 | Least squares (model fitting) | Levenberg–Marquardt / trust-region reflective | `least_squares` | Exploit residual structure instead of minimizing the sum of squares directly. |
 | Scalar, bracketed minimum | Brent's minimizer / golden section | `minimize_scalar` | |
+| Convex quadratic objective with box bounds, active set or multipliers wanted | Primal active-set: `qp_box` | `L-BFGS-B` (approximate), `lsq_linear(method='bvls')` (least-squares form) | Needs `H` symmetric positive definite (semidefinite is rejected, not regularised). Returns the exact KKT point to roundoff, the active set and the multipliers, in a few times `n` passes (85 at n = 124 in the tests; worst found by search about `5 n`; default cap `max(50, 20 n)`). One dense Cholesky of the free block per pass: about `O(n^3)` each, use it for n up to a few hundred. Infinite bounds allowed. Absolute tolerances `tol_step` (1e-10) and `tol_dual` (1e-9): rescale first. |
 
 ## Supporting linear algebra
 

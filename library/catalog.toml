@@ -410,6 +410,27 @@ source = "Golub & Van Loan, Matrix Computations, 4th ed., Sec. 4.5.1; Press et a
 notes = "Blocks are row-major m*m in flat slices (lower[k]=block (k+1,k), upper[k]=block (k,k+1), nb-1 each). Pivoting only within diagonal blocks (lu_dense), none across blocks: needs block diagonal dominance, SPD or M-matrix structure. An exactly singular eliminated block fails with success=false even if the full matrix is nonsingular; a near-singular block is not detected, check `growth` (max ||C_i||_inf) and the residual. Uses LU solves instead of the source's explicit 2x2 inverses."
 
 [[routine]]
+id = "qp_box"
+name = "Box-constrained convex quadratic program, primal active-set method"
+area = "optimize"
+problem_class = "box_constrained_convex_qp"
+suitable_for = ["bound_constrained_quadratic_programs","small_to_moderate_n","exact_kkt_point","active_set_and_multipliers_needed","repeated_solves_with_different_g_and_bounds"]
+equivalent = "scipy.optimize.minimize(method='L-BFGS-B') with an analytic gradient; scipy.optimize.lsq_linear(method='bvls') for least-squares form"
+status = "experimental"
+version = "0.1.0"
+rust = "library/rust/src/optimize/qp_box.rs"
+python = "library/python/agent_tools/optimize/qp_box.py"
+example = "library/examples/rust/qp_box.rs"
+example_python = "library/examples/python/qp_box.py"
+features = ["lower_bounds_upper_bounds_or_infinite","active_set_and_multipliers_returned","fixed_variables_lo_equals_hi","kkt_point_up_to_roundoff","uses_library_cholesky","result_with_nit_nfact"]
+units = "x, lo, hi in units of x; H in f/x^2; g in f/x; objective in f; multipliers in f/x (>= 0); tol_step in x, tol_dual in f/x (absolute)"
+valid_range = "H symmetric positive definite (lower triangle read), n up to a few hundred (dense O(n^3) per iteration); tested n = 1 to 124 and cond(H) up to 1e8"
+verified_rtol = [1e-13, 1e-8]
+tests = ["kkt_certificate_every_case","exact_rational_enumeration_n6_cond1e8","exact_rational_check_n30_n50_cond1e8","enumeration_3_pow_n_n_le_6_200_random","unconstrained_vs_direct_cholesky","all_bounds_active","degenerate_zero_multiplier","fixed_variable","vs_scipy_lbfgsb","random_n_up_to_50","muse_fixture_26_cases_n_4_to_124","ill_conditioned_free_set_does_not_stall","failure_modes","default_cap_reproducers_n3_n4_n5","python_vs_rust_9_cases"]
+source = "Nocedal & Wright, Numerical Optimization, 2nd ed., Alg. 16.3 (Sec. 16.5; equation numbers not checked); ported from chetools/muse twin-cstr/solver/src/qp.rs (own code), Cholesky from the library cholesky"
+notes = "Start x = clamp(0, lo, hi), no warm start (the source has none). Defaults: max_iter = max(50, 20 n) (a safety net, not a bound: releases count as passes and well-conditioned n = 3 to 5 problems were found needing 16 to 24; the source's 4 n failed on them), tol_step = 1e-10 (max|p|, absolute, units of x), tol_dual = 1e-9 (absolute, units of f/x): rescale badly scaled problems. H not positive definite, including semidefinite, is rejected up front (success = false, nfact = 1); the source's diagonal shift 1e-10 max(1, max H_ii) was caller-specific and is not ported, add your own. Infinite bounds are allowed; NaN bounds, lo > hi, non-finite H or g are invalid input (nfact = 0). Changes from the source: after a full step the next pass skips the re-solve (the source then needs max|p| <= tol_step, which fails for cond(H)|x| eps > 1e-10: n = 2, cond 6e6 hit its iteration cap); fixed variables (lo == hi) are never released; the blocking variable is set exactly to its bound and free variables are clamped to [lo, hi], so feasibility is exact. nit counts loop passes including the last, certifying one; nfact counts Cholesky factorizations including the probe of H. Measured: nit 85 and 73 on the two n = 124 muse cases; max |x - x_ref| 2.5e-13 against exact rational references (cond 1e8, n = 30), 5.7e-8 against the muse SciPy fixture (SciPy itself is accurate to about 5e-6 at cond 1e8). Python and Rust give identical active sets, nit and nfact and agree to 1e-12 on the example."
+
+[[routine]]
 id = "dopri5"
 name = "Adaptive Dormand-Prince 5(4) explicit integrator (SciPy RK45), any n"
 area = "ode"
