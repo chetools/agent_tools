@@ -149,3 +149,15 @@ General symptoms and fixes from standard practice. Add routine-specific entries 
 | Failure "W = I - h d J is singular" | `1/(h d)` is an eigenvalue of `J`, or `J` has NaN | Check the Jacobian; the step is not shrunk automatically after this failure. |
 | Failure "step size underflow" | Finite-time blow-up, a discontinuity, or an inconsistent Jacobian | Check `f` and `jac` against each other by finite differences; shorten the span before a singularity. |
 | Achieved error is 10 to 100 times larger than rtol | Local, not global, error control (expected) | Request an rtol 10 to 100 times smaller than the accuracy you need; check against a tighter run. |
+
+## Box-constrained QP (`qp_box`)
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `success = false`, "h is not positive definite", `nfact = 1`, `nit = 0` | `H` semidefinite, indefinite, or too ill-conditioned for f64 Cholesky; only the lower triangle is read | Check symmetry and eigenvalues; add a small diagonal term yourself (the routine does not regularise). `x` is `clamp(0, lo, hi)`. |
+| `success = false`, "invalid input", `nfact = 0`, `f = NaN` | Wrong sizes, NaN or non-finite `H`/`g`, a NaN bound, `lo > hi`, `lo = +inf` or `hi = -inf` | Fix the data; infinite bounds are allowed only as `lo = -inf`, `hi = +inf`. |
+| `success = false`, "max_iter reached" | Cap `4 n` (default) hit: heavy degeneracy, or tolerances far too tight for the scale of the data | `x` is the last feasible iterate. Rescale `x` and `f` to O(1), loosen `tol_step`/`tol_dual`, or raise `max_iter`. |
+| Active bound with multiplier 0 | Degenerate (weakly active) bound: the unconstrained-on-free-set minimizer sits exactly on it | Not an error; the point is the KKT point. A bound at which the start `clamp(0)` already lies stays active; others may be reported free. |
+| Fixed variable (`lo == hi`) has a multiplier of either sign | Its bound is an equality, so the sign is not restricted | `active` gives the side of the sign of `q`, the multiplier is `|q|`. |
+| Result differs from SciPy L-BFGS-B at the 1e-6 to 1e-5 level when `cond(H)` is large | SciPy's accuracy, not the routine's: at `cond(H) = 1e8` L-BFGS-B was off by 5e-6 against the exact rational solution, the routine by 3e-13 | Compare KKT residuals, not `x`. |
+| Solutions of a free variable shift in the 8th digit with `cond(H) = 1e8` | `x` is determined only to about `cond eps |x|` by any f64 solve | Expected; the stationarity residual stays at rounding level. |
